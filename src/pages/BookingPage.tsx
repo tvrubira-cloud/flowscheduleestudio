@@ -42,7 +42,7 @@ type Etapa = "data" | "horario" | "dados" | "confirmado"
 export default function BookingPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { cliente: clienteLogado, perfil: perfilCliente } = useClienteAuth()
+  const { cliente: clienteLogado, perfil: perfilCliente, loading } = useClienteAuth()
   const { buscarDisponibilidade, buscarHorariosOcupados, salvarAgendamento, salvando } =
     useAgendamentosPublicos()
 
@@ -57,6 +57,14 @@ export default function BookingPage() {
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
+
+  // Redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!userId || loading) return
+    if (!clienteLogado) {
+      navigate(`/booking/${userId}/painel`, { replace: true })
+    }
+  }, [userId, clienteLogado, loading])
 
   useEffect(() => {
     if (!userId) return
@@ -202,7 +210,7 @@ export default function BookingPage() {
             className="gap-2 text-muted-foreground hover:text-foreground shrink-0"
           >
             <UserCircle className="w-4 h-4" />
-            {clienteLogado ? "Minha conta" : "Entrar"}
+            {perfilCliente ? perfilCliente.nome.split(" ")[0] : "Minha conta"}
           </Button>
         </div>
 
