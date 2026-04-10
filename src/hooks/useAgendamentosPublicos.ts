@@ -1,6 +1,6 @@
 import { useState } from "react"
 import {
-  collection, addDoc, getDocs, query, where, Timestamp, doc, getDoc,
+  collection, addDoc, getDocs, query, where, Timestamp, doc, getDoc, updateDoc,
 } from "firebase/firestore"
 import { db, isFirebaseConfigured } from "@/lib/firebase"
 import type { AgendamentoPublico, Disponibilidade } from "@/types"
@@ -95,6 +95,14 @@ export function useAgendamentosPublicos() {
     }
   }
 
+  const atualizarStatus = async (
+    id: string,
+    status: AgendamentoPublico["status"]
+  ): Promise<void> => {
+    if (!isFirebaseConfigured || !db) return
+    await updateDoc(doc(db, "agendamentos_publicos", id), { status })
+  }
+
   return {
     carregando,
     salvando,
@@ -102,5 +110,6 @@ export function useAgendamentosPublicos() {
     buscarHorariosOcupados,
     salvarAgendamento,
     buscarAgendamentos,
+    atualizarStatus,
   }
 }
