@@ -107,7 +107,7 @@ export default function DashboardPage() {
             <div>
               <CardTitle>Próximos Agendamentos</CardTitle>
               <CardDescription>
-                Escolha data e hora, depois clique em um cliente para enviar pelo WhatsApp
+                Escolha data e hora, depois clique em Agendar para abrir o WhatsApp com a mensagem pronta
               </CardDescription>
             </div>
           </CardHeader>
@@ -178,17 +178,19 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-gradient border-none text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-20" aria-hidden="true">
-              <MessageSquare size={80} />
-            </div>
+          <Card className="border-white/5 bg-zinc-900/20">
             <CardHeader>
-              <CardTitle>Flow AI Integration</CardTitle>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-green-400" aria-hidden="true" />
+                <CardTitle className="text-sm">Aviso via WhatsApp</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-white/80 leading-relaxed">
-                Sua IA está configurada para enviar lembretes automáticos via WhatsApp 1 hora antes
-                de cada compromisso.
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Selecione data e hora, depois clique em <strong className="text-foreground">Agendar</strong> — o WhatsApp abre com a mensagem de confirmação já preenchida para você enviar ao cliente.
+              </p>
+              <p className="text-xs text-muted-foreground border-t border-white/5 pt-2">
+                Lembretes automáticos em breve.
               </p>
             </CardContent>
           </Card>
