@@ -6,7 +6,7 @@ import toast from "react-hot-toast"
 import type { Disponibilidade } from "@/types"
 
 export const DISPONIBILIDADE_DEFAULT: Disponibilidade = {
-  diasSemana: [1, 2, 3, 4, 5],
+  diasSemana: [1, 2, 3, 4, 5, 6],
   horarioInicio: "09:00",
   horarioFim: "18:00",
   duracaoMinutos: 60,
