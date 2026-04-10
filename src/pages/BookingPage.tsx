@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { Calendar, Clock, User, Phone, CheckCircle, Loader2 } from "lucide-react"
+import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle } from "lucide-react"
+import { useClienteAuth } from "@/hooks/useClienteAuth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,8 @@ type Etapa = "data" | "horario" | "dados" | "confirmado"
 
 export default function BookingPage() {
   const { userId } = useParams<{ userId: string }>()
+  const navigate = useNavigate()
+  const { cliente: clienteLogado, perfil: perfilCliente } = useClienteAuth()
   const { buscarDisponibilidade, buscarHorariosOcupados, salvarAgendamento, salvando } =
     useAgendamentosPublicos()
 
@@ -61,7 +64,12 @@ export default function BookingPage() {
       setDisponibilidade(d)
       setCarregando(false)
     })
-  }, [userId])
+    // Pré-preenche dados do cliente logado
+    if (perfilCliente) {
+      setNome(perfilCliente.nome)
+      setTelefone(perfilCliente.telefone)
+    }
+  }, [userId, perfilCliente])
 
   const selecionarData = async (data: Date) => {
     setDataSelecionada(data)
@@ -105,6 +113,7 @@ export default function BookingPage() {
         data: formatarData(dataSelecionada),
         hora: horarioSelecionado,
         userId,
+        clienteUid: clienteLogado?.uid,
         status: "pendente",
       })
       setEtapa("confirmado")
@@ -181,9 +190,20 @@ export default function BookingPage() {
       <div className="max-w-lg mx-auto space-y-6">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold">{nomeNegocio}</h1>
-          <p className="text-muted-foreground text-sm">Escolha uma data e horário disponível</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">{nomeNegocio}</h1>
+            <p className="text-muted-foreground text-sm">Escolha uma data e horário disponível</p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate(`/booking/${userId}/painel`)}
+            className="gap-2 text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <UserCircle className="w-4 h-4" />
+            {clienteLogado ? "Minha conta" : "Entrar"}
+          </Button>
         </div>
 
         {/* Indicador de etapas */}

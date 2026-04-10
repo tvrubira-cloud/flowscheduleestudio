@@ -48,7 +48,8 @@ export interface AgendamentoPublico {
   clienteTelefone: string
   data: string             // "YYYY-MM-DD"
   hora: string             // "HH:mm"
-  userId: string
+  userId: string           // salon owner uid
+  clienteUid?: string      // cliente autenticado uid (opcional)
   status: "pendente" | "confirmado" | "cancelado"
   createdAt?: Timestamp
 }

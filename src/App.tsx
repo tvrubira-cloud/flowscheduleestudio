@@ -7,6 +7,7 @@ import { LoginForm } from "@/components/auth/LoginForm"
 import { AppShell } from "@/components/layout/AppShell"
 
 const BookingPage = lazy(() => import("@/pages/BookingPage"))
+const ClientePainelPage = lazy(() => import("@/pages/ClientePainelPage"))
 
 function AuthedApp() {
   const { user, authLoading } = useAppStore()
@@ -46,6 +47,18 @@ export default function App() {
             </div>
           }>
             <BookingPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/booking/:salonId/painel"
+        element={
+          <Suspense fallback={
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-primary font-bold animate-pulse">
+              Carregando...
+            </div>
+          }>
+            <ClientePainelPage />
           </Suspense>
         }
       />
