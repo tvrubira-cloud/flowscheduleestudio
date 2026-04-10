@@ -300,31 +300,34 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={ag.status} />
                       {ag.status === "pendente" && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
-                            disabled={atualizando === ag.id}
-                            onClick={() => handleStatus(ag.id, "confirmado")}
-                          >
-                            {atualizando === ag.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <CheckCircle className="w-3.5 h-3.5" />
-                            }
-                            Confirmar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1"
-                            disabled={atualizando === ag.id}
-                            onClick={() => handleStatus(ag.id, "cancelado")}
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            Cancelar
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
+                          disabled={atualizando === ag.id}
+                          onClick={() => handleStatus(ag.id, "confirmado")}
+                        >
+                          {atualizando === ag.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <CheckCircle className="w-3.5 h-3.5" />
+                          }
+                          Confirmar
+                        </Button>
+                      )}
+                      {ag.status !== "cancelado" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1"
+                          disabled={atualizando === ag.id}
+                          onClick={() => handleStatus(ag.id, "cancelado")}
+                        >
+                          {atualizando === ag.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <XCircle className="w-3.5 h-3.5" />
+                          }
+                          Cancelar
+                        </Button>
                       )}
                     </div>
                   </div>
