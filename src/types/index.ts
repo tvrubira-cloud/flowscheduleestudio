@@ -32,6 +32,27 @@ export interface Agendamento {
   createdAt?: Timestamp
 }
 
+// ─── Disponibilidade ─────────────────────────────────────────────────────────
+
+export interface Disponibilidade {
+  diasSemana: number[]     // 0=Dom 1=Seg 2=Ter 3=Qua 4=Qui 5=Sex 6=Sab
+  horarioInicio: string    // "09:00"
+  horarioFim: string       // "18:00"
+  duracaoMinutos: number   // 30 | 60 | 90 | 120
+  nomeNegocio: string
+}
+
+export interface AgendamentoPublico {
+  id: string
+  clienteNome: string
+  clienteTelefone: string
+  data: string             // "YYYY-MM-DD"
+  hora: string             // "HH:mm"
+  userId: string
+  status: "pendente" | "confirmado" | "cancelado"
+  createdAt?: Timestamp
+}
+
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
-export type ActiveTab = "dashboard" | "clientes" | "financeiro" | "admin"
+export type ActiveTab = "dashboard" | "clientes" | "financeiro" | "configuracoes" | "admin"

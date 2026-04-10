@@ -1,6 +1,6 @@
 import {
   Calendar, LayoutDashboard, Users, CreditCard,
-  LogOut, BadgeCheck, Zap, ShieldCheck,
+  LogOut, BadgeCheck, Zap, ShieldCheck, Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth"
 import { useAssinatura } from "@/hooks/useAssinatura"
 import type { ActiveTab } from "@/types"
 
-// ── Coloque aqui o seu e-mail de admin ────────────────────────────────────────
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL ?? ""
 
 interface NavItem {
@@ -21,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { id: "clientes", label: "Clientes", Icon: Users },
   { id: "financeiro", label: "Financeiro", Icon: CreditCard },
+  { id: "configuracoes", label: "Configurações", Icon: Settings },
 ]
 
 export function Sidebar() {
@@ -56,7 +56,6 @@ export function Sidebar() {
           </Button>
         ))}
 
-        {/* Menu Admin — visível só para você */}
         {isAdmin && (
           <Button
             variant={activeTab === "admin" ? "default" : "ghost"}

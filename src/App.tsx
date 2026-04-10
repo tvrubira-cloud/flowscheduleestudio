@@ -1,11 +1,14 @@
-import { useEffect } from "react"
+import { lazy, Suspense, useEffect } from "react"
+import { Routes, Route } from "react-router-dom"
 import { useAppStore } from "@/store/useAppStore"
 import { useAuth } from "@/hooks/useAuth"
 import { useClientes } from "@/hooks/useClientes"
 import { LoginForm } from "@/components/auth/LoginForm"
 import { AppShell } from "@/components/layout/AppShell"
 
-export default function App() {
+const BookingPage = lazy(() => import("@/pages/BookingPage"))
+
+function AuthedApp() {
   const { user, authLoading } = useAppStore()
   const { entrarDemo } = useAuth()
   const { carregarClientes } = useClientes()
@@ -29,4 +32,24 @@ export default function App() {
   }
 
   return <AppShell />
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route
+        path="/booking/:userId"
+        element={
+          <Suspense fallback={
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-primary font-bold animate-pulse">
+              Carregando...
+            </div>
+          }>
+            <BookingPage />
+          </Suspense>
+        }
+      />
+      <Route path="/*" element={<AuthedApp />} />
+    </Routes>
+  )
 }

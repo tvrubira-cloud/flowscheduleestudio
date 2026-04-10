@@ -5,6 +5,7 @@ import { useAppStore } from "@/store/useAppStore"
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
 const ClientesPage = lazy(() => import("@/pages/ClientesPage"))
 const FinanceiroPage = lazy(() => import("@/pages/FinanceiroPage"))
+const ConfiguracoesPage = lazy(() => import("@/pages/ConfiguracoesPage"))
 const AdminPage = lazy(() => import("@/pages/AdminPage"))
 
 function PageLoader() {
@@ -39,6 +40,7 @@ export function AppShell() {
             {activeTab === "dashboard" && <DashboardPage />}
             {activeTab === "clientes" && <ClientesPage />}
             {activeTab === "financeiro" && <FinanceiroPage />}
+            {activeTab === "configuracoes" && <ConfiguracoesPage />}
             {activeTab === "admin" && <AdminPage />}
           </Suspense>
         </div>

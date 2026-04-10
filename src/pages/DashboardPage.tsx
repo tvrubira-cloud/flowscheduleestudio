@@ -55,7 +55,7 @@ export default function DashboardPage() {
     useAppStore()
   const { clientes } = useClientes()
 
-  const linkPublico = `https://flow.ai/booking/${user?.uid ?? "demo"}`
+  const linkPublico = `${window.location.origin}/booking/${user?.uid ?? "demo"}`
 
   const criarAgendamento = (cliente: Cliente) => {
     const result = agendamentoSchema.safeParse({ data: schedulingDate, hora: schedulingTime })
