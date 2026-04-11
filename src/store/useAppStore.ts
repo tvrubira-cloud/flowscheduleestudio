@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import type { AppUser, Cliente, ActiveTab } from "@/types"
 
 interface AppState {
@@ -39,17 +40,29 @@ const initialState = {
   schedulingTime: "",
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  ...initialState,
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      ...initialState,
 
-  setUser: (user) => set({ user }),
-  setIsDemo: (isDemo) => set({ isDemo }),
-  setAuthLoading: (authLoading) => set({ authLoading }),
-  setClientes: (clientes) => set({ clientes }),
-  addCliente: (cliente) =>
-    set((state) => ({ clientes: [...state.clientes, cliente] })),
-  setActiveTab: (activeTab) => set({ activeTab }),
-  setSchedulingDate: (schedulingDate) => set({ schedulingDate }),
-  setSchedulingTime: (schedulingTime) => set({ schedulingTime }),
-  reset: () => set(initialState),
-}))
+      setUser: (user) => set({ user }),
+      setIsDemo: (isDemo) => set({ isDemo }),
+      setAuthLoading: (authLoading) => set({ authLoading }),
+      setClientes: (clientes) => set({ clientes }),
+      addCliente: (cliente) =>
+        set((state) => ({ clientes: [...state.clientes, cliente] })),
+      setActiveTab: (activeTab) => set({ activeTab }),
+      setSchedulingDate: (schedulingDate) => set({ schedulingDate }),
+      setSchedulingTime: (schedulingTime) => set({ schedulingTime }),
+      reset: () => set(initialState),
+    }),
+    {
+      name: "flowschedule-storage",
+      partialize: (state) => ({
+        clientes: state.clientes,
+        isDemo: state.isDemo,
+        activeTab: state.activeTab,
+      }),
+    }
+  )
+)

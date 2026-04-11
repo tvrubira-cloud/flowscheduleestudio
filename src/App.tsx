@@ -12,13 +12,7 @@ const ClientePainelPage = lazy(() => import("@/pages/ClientePainelPage"))
 function AuthedApp() {
   const { user, authLoading } = useAppStore()
   const { entrarDemo } = useAuth()
-  const { carregarClientes } = useClientes()
-
-  useEffect(() => {
-    if (user && user.uid !== "demo-user") {
-      carregarClientes(user.uid)
-    }
-  }, [user, carregarClientes])
+  useClientes() // Inicializa o listener
 
   if (authLoading) {
     return (

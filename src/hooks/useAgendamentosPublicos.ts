@@ -68,6 +68,25 @@ export function useAgendamentosPublicos() {
     if (!isFirebaseConfigured || !db) throw new Error("Firebase não configurado")
     setSalvando(true)
     try {
+      // 1. Sincronizar com a coleção de 'clientes' do profissional
+      const clientesRef = collection(db, "clientes")
+      const q = query(
+        clientesRef,
+        where("userId", "==", dados.userId),
+        where("telefone", "==", dados.clienteTelefone)
+      )
+      const clientSnap = await getDocs(q)
+      
+      if (clientSnap.empty) {
+        await addDoc(clientesRef, {
+          nome: dados.clienteNome,
+          telefone: dados.clienteTelefone,
+          userId: dados.userId,
+          createdAt: Timestamp.now(),
+        })
+      }
+
+      // 2. Salvar o agendamento
       await addDoc(collection(db, "agendamentos_publicos"), {
         ...dados,
         status: "pendente",

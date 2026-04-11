@@ -6,7 +6,17 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth"
-import { doc, setDoc, getDoc, Timestamp } from "firebase/firestore"
+import {
+  doc,
+  setDoc,
+  getDoc,
+  Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+} from "firebase/firestore"
 import { clienteAuth } from "@/lib/firebase-cliente"
 import { db, isFirebaseConfigured } from "@/lib/firebase"
 import toast from "react-hot-toast"
@@ -61,7 +71,28 @@ export function useClienteAuth() {
         salonId,
         createdAt: Timestamp.now(),
       }
+      
+      // 1. Salvar perfil global do cliente
       await setDoc(doc(db, "perfis_clientes", cred.user.uid), perfilData)
+      
+      // 2. Sincronizar com a lista de clientes do profissional (salonId)
+      const clientesRef = collection(db, "clientes")
+      const q = query(
+        clientesRef,
+        where("userId", "==", salonId),
+        where("telefone", "==", perfilData.telefone)
+      )
+      const clientSnap = await getDocs(q)
+      
+      if (clientSnap.empty) {
+        await addDoc(clientesRef, {
+          nome: perfilData.nome,
+          telefone: perfilData.telefone,
+          userId: salonId,
+          createdAt: Timestamp.now(),
+        })
+      }
+
       setPerfil(perfilData)
       toast.success("Conta criada com sucesso!")
       return true

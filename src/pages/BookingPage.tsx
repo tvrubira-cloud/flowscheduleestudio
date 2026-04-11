@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, Navigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle } from "lucide-react"
 import { useClienteAuth } from "@/hooks/useClienteAuth"
@@ -57,14 +57,6 @@ export default function BookingPage() {
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
-
-  // Redireciona para login se não estiver autenticado
-  useEffect(() => {
-    if (!userId || loading) return
-    if (!clienteLogado) {
-      navigate(`/booking/${userId}/painel`, { replace: true })
-    }
-  }, [userId, clienteLogado, loading])
 
   useEffect(() => {
     if (!userId) return
@@ -128,6 +120,20 @@ export default function BookingPage() {
     } catch {
       toast.error("Erro ao confirmar agendamento. Tente novamente.")
     }
+  }
+
+  // ── Auth guard ─────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
+  }
+
+  if (!clienteLogado) {
+    return <Navigate to={`/booking/${userId}/painel`} replace />
   }
 
   // ── Loading ────────────────────────────────────────────────────────────────
