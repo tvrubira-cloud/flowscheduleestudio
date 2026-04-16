@@ -2,58 +2,45 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   CreditCard, Check, Zap, ExternalLink, QrCode,
-  FileText, Key, Loader2, BadgeCheck, X, Mail, User,
+  FileText, Key, Loader2, BadgeCheck, X, User, RefreshCw, AlertTriangle,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAssinatura } from "@/hooks/useAssinatura"
-import { salvarPedidoPendente } from "@/hooks/usePedidos"
 import toast from "react-hot-toast"
 import { z } from "zod"
 
-const PAGSEGURO_LINK = "https://pag.ae/81FCjY2jo"
+const nomeSchema = z.string().min(2, "Nome deve ter ao menos 2 caracteres")
 
-const pedidoSchema = z.object({
-  nome: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
-  email: z.string().email("E-mail inválido"),
-})
-
-// ─── Modal de captura de e-mail ───────────────────────────────────────────────
+// ─── Modal: captura nome antes de ir ao PagSeguro ─────────────────────────────
 
 function ModalAssinar({ onClose }: { onClose: () => void }) {
+  const { criarAssinatura } = useAssinatura()
   const [nome, setNome] = useState("")
-  const [email, setEmail] = useState("")
-  const [errors, setErrors] = useState<{ nome?: string; email?: string }>({})
+  const [erro, setErro] = useState("")
   const [loading, setLoading] = useState(false)
 
   const handleConfirmar = async () => {
-    const result = pedidoSchema.safeParse({ nome, email })
+    const result = nomeSchema.safeParse(nome)
     if (!result.success) {
-      const fieldErrors: { nome?: string; email?: string } = {}
-      result.error.issues.forEach((e) => {
-        const field = e.path[0] as "nome" | "email"
-        fieldErrors[field] = e.message
-      })
-      setErrors(fieldErrors)
+      setErro(result.error.issues[0].message)
       return
     }
-    setErrors({})
+    setErro("")
     setLoading(true)
     try {
-      await salvarPedidoPendente(nome, email)
-      window.open(PAGSEGURO_LINK, "_blank", "noopener,noreferrer")
-      toast.success("Redirecionando para o PagSeguro...")
+      await criarAssinatura(nome)
       onClose()
     } catch {
-      toast.error("Erro ao salvar. Tente novamente.")
+      toast.error("Erro ao iniciar assinatura. Tente novamente.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Dados para ativação"
+    <div role="dialog" aria-modal="true" aria-label="Dados para assinatura"
       className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
@@ -65,9 +52,9 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between p-6 border-b border-white/5">
           <div>
-            <h2 className="text-base font-bold">Antes de pagar</h2>
+            <h2 className="text-base font-bold">Antes de assinar</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Usaremos esses dados para enviar seu código de ativação
+              Seu nome será enviado ao PagSeguro para identificação
             </p>
           </div>
           <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar">
@@ -77,41 +64,25 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
 
         <div className="p-6 space-y-4">
           <div className="space-y-1">
-            <label htmlFor="pedido-nome" className="text-sm font-medium flex items-center gap-2">
+            <label htmlFor="assinante-nome" className="text-sm font-medium flex items-center gap-2">
               <User className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-              Seu nome
+              Seu nome completo
             </label>
             <Input
-              id="pedido-nome"
+              id="assinante-nome"
               placeholder="João Silva"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              aria-invalid={!!errors.nome}
+              aria-invalid={!!erro}
               autoComplete="name"
-            />
-            {errors.nome && <p role="alert" className="text-xs text-red-400">{errors.nome}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="pedido-email" className="text-sm font-medium flex items-center gap-2">
-              <Mail className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-              Seu e-mail
-            </label>
-            <Input
-              id="pedido-email"
-              type="email"
-              placeholder="joao@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={!!errors.email}
-              autoComplete="email"
               onKeyDown={(e) => e.key === "Enter" && handleConfirmar()}
             />
-            {errors.email && <p role="alert" className="text-xs text-red-400">{errors.email}</p>}
+            {erro && <p role="alert" className="text-xs text-red-400">{erro}</p>}
           </div>
 
           <p className="text-xs text-muted-foreground bg-white/5 rounded-lg p-3">
-            Após confirmar o pagamento no PagSeguro, enviaremos um código de ativação para este e-mail.
+            Você será redirecionado ao PagSeguro para autorizar a cobrança de{" "}
+            <strong className="text-white">R$ 49,90/mês</strong>. O plano é renovado automaticamente e pode ser cancelado a qualquer momento.
           </p>
 
           <Button
@@ -120,7 +91,7 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
             className="w-full h-11 gap-2 font-bold"
           >
             {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Preparando...</>
               : <><ExternalLink className="w-4 h-4" aria-hidden="true" /> Ir para o PagSeguro</>
             }
           </Button>
@@ -139,12 +110,28 @@ const PLANO_PRO_FEATURES = [
   "Suporte prioritário",
 ]
 
-// ─── Card: Plano Pro já ativo ─────────────────────────────────────────────────
+// ─── Card: Plano Pro ativo ────────────────────────────────────────────────────
 
-function PlanoProAtivo({ ativadoEm }: { ativadoEm?: Date }) {
+function PlanoProAtivo({
+  ativadoEm,
+  expiraEm,
+  renovacaoAutomatica,
+}: {
+  ativadoEm?: Date
+  expiraEm?: Date
+  renovacaoAutomatica?: boolean
+}) {
+  const { cancelarAssinatura, cancelando } = useAssinatura()
+  const [confirmando, setConfirmando] = useState(false)
+
+  const handleCancelar = async () => {
+    const ok = await cancelarAssinatura()
+    if (ok) setConfirmando(false)
+  }
+
   return (
     <Card className="border-green-500/30 bg-green-500/5">
-      <CardContent className="pt-6 space-y-3">
+      <CardContent className="pt-6 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
             <BadgeCheck className="w-6 h-6 text-green-400" />
@@ -158,15 +145,61 @@ function PlanoProAtivo({ ativadoEm }: { ativadoEm?: Date }) {
             )}
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Você tem acesso a todos os recursos do Plano Pro. Aproveite!
-        </p>
+
+        {expiraEm && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/5 rounded-lg px-3 py-2">
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            {renovacaoAutomatica
+              ? <>Renovação automática em <strong className="text-white ml-1">{expiraEm.toLocaleDateString("pt-BR")}</strong></>
+              : <>Acesso válido até <strong className="text-white ml-1">{expiraEm.toLocaleDateString("pt-BR")}</strong></>
+            }
+          </div>
+        )}
+
+        {renovacaoAutomatica && !confirmando && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+            onClick={() => setConfirmando(true)}
+          >
+            Cancelar assinatura
+          </Button>
+        )}
+
+        {confirmando && (
+          <div className="space-y-2 border border-red-500/20 rounded-lg p-3 bg-red-500/5">
+            <div className="flex items-start gap-2 text-xs text-red-400">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              Tem certeza? Você perderá o acesso Pro ao fim do período atual.
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 border-white/10"
+                onClick={() => setConfirmando(false)}
+                disabled={cancelando}
+              >
+                Manter
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleCancelar}
+                disabled={cancelando}
+              >
+                {cancelando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirmar cancelamento"}
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-// ─── Card: Ativar com código ──────────────────────────────────────────────────
+// ─── Card: Ativar com código manual (fallback) ────────────────────────────────
 
 function AtivacaoComCodigo() {
   const { ativando, ativarComCodigo } = useAssinatura()
@@ -195,10 +228,10 @@ function AtivacaoComCodigo() {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Key className="w-4 h-4 text-primary" aria-hidden="true" />
-          Já pagou? Ative seu plano
+          Já tem um código? Ative manualmente
         </CardTitle>
         <CardDescription>
-          Após confirmarmos seu pagamento, enviaremos um código por WhatsApp ou e-mail.
+          Use um código enviado pela equipe de suporte.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -238,121 +271,119 @@ export default function FinanceiroPage() {
 
   return (
     <>
-    <motion.div
-      key="financeiro"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="max-w-2xl mx-auto space-y-6"
-    >
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Planos & Pagamento</h2>
-        <p className="text-muted-foreground mt-1">
-          Escolha o plano ideal para o seu negócio.
-        </p>
-      </div>
+      <motion.div
+        key="financeiro"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="max-w-2xl mx-auto space-y-6"
+      >
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Planos & Pagamento</h2>
+          <p className="text-muted-foreground mt-1">
+            Escolha o plano ideal para o seu negócio.
+          </p>
+        </div>
 
-      {/* Plano já ativo */}
-      {!loadingAssinatura && isPro && (
-        <PlanoProAtivo ativadoEm={assinatura.ativadoEm} />
-      )}
+        {!loadingAssinatura && isPro && (
+          <PlanoProAtivo
+            ativadoEm={assinatura.ativadoEm}
+            expiraEm={assinatura.expiraEm}
+            renovacaoAutomatica={assinatura.renovacaoAutomatica}
+          />
+        )}
 
-      {/* Plano Gratuito */}
-      {!isPro && (
-        <Card className="border-white/5 bg-zinc-900/20">
-          <CardHeader>
-            <CardTitle className="text-lg">Plano Gratuito</CardTitle>
-            <CardDescription>Para quem está começando</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">R$ 0</span>
-              <span className="text-muted-foreground">/mês</span>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {["Até 10 clientes", "5 agendamentos por mês", "Link público básico"].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-400" aria-hidden="true" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" disabled className="w-full border-white/10">
-              Plano Atual
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Plano Pro */}
-      {!isPro && (
-        <Card className="premium-gradient border-none text-white overflow-hidden relative">
-          <div className="absolute top-4 right-4 opacity-10" aria-hidden="true">
-            <Zap size={80} />
-          </div>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" aria-hidden="true" />
-              <CardTitle className="text-lg">Plano Pro</CardTitle>
-            </div>
-            <CardDescription className="text-white/70">
-              Para profissionais que querem crescer
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold">R$ 49.90</span>
-              <span className="text-white/70">/mês</span>
-            </div>
-
-            <ul className="space-y-2 text-sm text-white/80">
-              {PLANO_PRO_FEATURES.map((feature) => (
-                <li key={feature} className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-white" aria-hidden="true" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-
-            {/* Formas de pagamento */}
-            <div className="flex items-center gap-3 py-3 border-t border-white/10">
-              <span className="text-xs text-white/60">Formas de pagamento:</span>
-              <div className="flex gap-2 text-xs text-white/90">
-                <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
-                  <QrCode className="w-3 h-3" aria-hidden="true" /> PIX
-                </span>
-                <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
-                  <FileText className="w-3 h-3" aria-hidden="true" /> Boleto
-                </span>
-                <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
-                  <CreditCard className="w-3 h-3" aria-hidden="true" /> Cartão
-                </span>
+        {!isPro && (
+          <Card className="border-white/5 bg-zinc-900/20">
+            <CardHeader>
+              <CardTitle className="text-lg">Plano Gratuito</CardTitle>
+              <CardDescription>Para quem está começando</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">R$ 0</span>
+                <span className="text-muted-foreground">/mês</span>
               </div>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                {["Até 10 clientes", "5 agendamentos por mês", "Link público básico"].map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-green-400" aria-hidden="true" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="outline" disabled className="w-full border-white/10">
+                Plano Atual
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isPro && (
+          <Card className="premium-gradient border-none text-white overflow-hidden relative">
+            <div className="absolute top-4 right-4 opacity-10" aria-hidden="true">
+              <Zap size={80} />
             </div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" aria-hidden="true" />
+                <CardTitle className="text-lg">Plano Pro</CardTitle>
+              </div>
+              <CardDescription className="text-white/70">
+                Para profissionais que querem crescer
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold">R$ 49,90</span>
+                <span className="text-white/70">/mês</span>
+              </div>
 
-            <Button
-              onClick={() => setModalAberto(true)}
-              className="w-full bg-white text-zinc-900 hover:bg-white/90 font-bold h-12 gap-2 text-base"
-            >
-              <ExternalLink className="w-4 h-4" aria-hidden="true" />
-              Assinar Agora · R$ 49.90/mês
-            </Button>
+              <ul className="space-y-2 text-sm text-white/80">
+                {PLANO_PRO_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-white" aria-hidden="true" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
 
-            <p className="text-xs text-center text-white/50">
-              Pagamento processado com segurança pelo PagSeguro · PagBank
-            </p>
-          </CardContent>
-        </Card>
-      )}
+              <div className="flex items-center gap-3 py-3 border-t border-white/10">
+                <span className="text-xs text-white/60">Formas de pagamento:</span>
+                <div className="flex gap-2 text-xs text-white/90">
+                  <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
+                    <QrCode className="w-3 h-3" aria-hidden="true" /> PIX
+                  </span>
+                  <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
+                    <FileText className="w-3 h-3" aria-hidden="true" /> Boleto
+                  </span>
+                  <span className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
+                    <CreditCard className="w-3 h-3" aria-hidden="true" /> Cartão
+                  </span>
+                </div>
+              </div>
 
-      {/* Campo de ativação com código */}
-      {!loadingAssinatura && !isPro && <AtivacaoComCodigo />}
-    </motion.div>
+              <Button
+                onClick={() => setModalAberto(true)}
+                className="w-full bg-white text-zinc-900 hover:bg-white/90 font-bold h-12 gap-2 text-base"
+              >
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                Assinar Agora · R$ 49,90/mês
+              </Button>
 
-    {/* Modal captura e-mail */}
-    <AnimatePresence>
-      {modalAberto && <ModalAssinar onClose={() => setModalAberto(false)} />}
-    </AnimatePresence>
+              <p className="text-xs text-center text-white/50">
+                Renovação automática mensal · Cancele quando quiser · PagSeguro
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {!loadingAssinatura && !isPro && <AtivacaoComCodigo />}
+      </motion.div>
+
+      <AnimatePresence>
+        {modalAberto && <ModalAssinar onClose={() => setModalAberto(false)} />}
+      </AnimatePresence>
     </>
   )
 }

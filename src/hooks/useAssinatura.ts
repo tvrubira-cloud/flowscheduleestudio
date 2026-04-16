@@ -14,6 +14,9 @@ export interface Assinatura {
   plano: "gratuito" | "pro"
   status: "ativo" | "inativo" | "expirado"
   ativadoEm?: Date
+  expiraEm?: Date
+  renovacaoAutomatica?: boolean
+  psPreApprovalCode?: string
   codigo?: string
 }
 
@@ -22,8 +25,12 @@ export function useAssinatura() {
   const [assinatura, setAssinatura] = useState<Assinatura>({ plano: "gratuito", status: "ativo" })
   const [loadingAssinatura, setLoadingAssinatura] = useState(true)
   const [ativando, setAtivando] = useState(false)
+  const [cancelando, setCancelando] = useState(false)
 
-  const isPro = assinatura.plano === "pro" && assinatura.status === "ativo"
+  const isPro =
+    assinatura.plano === "pro" &&
+    assinatura.status === "ativo" &&
+    (!assinatura.expiraEm || assinatura.expiraEm > new Date())
 
   // ── Carregar assinatura do usuário ────────────────────────────────────────
   useEffect(() => {
@@ -42,6 +49,9 @@ export function useAssinatura() {
             plano: data.plano ?? "gratuito",
             status: data.status ?? "inativo",
             ativadoEm: data.ativadoEm?.toDate?.() ?? undefined,
+            expiraEm: data.expiraEm?.toDate?.() ?? undefined,
+            renovacaoAutomatica: data.renovacaoAutomatica ?? false,
+            psPreApprovalCode: data.psPreApprovalCode ?? undefined,
             codigo: data.codigo,
           })
         }
@@ -55,7 +65,73 @@ export function useAssinatura() {
     carregar()
   }, [user, isDemo])
 
-  // ── Ativar plano Pro com código ──────────────────────────────────────────
+  // ── Criar assinatura recorrente via PagSeguro ─────────────────────────────
+  const criarAssinatura = async (nome: string): Promise<void> => {
+    if (isDemo) {
+      toast.error("No Modo Demo a assinatura não é processada. Crie uma conta real.")
+      return
+    }
+
+    if (!user?.email) {
+      toast.error("Você precisa estar logado para assinar.")
+      return
+    }
+
+    try {
+      const res = await fetch("/api/criar-assinatura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, nome, email: user.email }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.checkoutUrl) {
+        toast.error(data.error ?? "Erro ao criar assinatura. Tente novamente.")
+        return
+      }
+
+      window.open(data.checkoutUrl, "_blank", "noopener,noreferrer")
+    } catch {
+      toast.error("Erro de conexão. Tente novamente.")
+    }
+  }
+
+  // ── Cancelar assinatura recorrente ────────────────────────────────────────
+  const cancelarAssinatura = async (): Promise<boolean> => {
+    if (isDemo || !user) {
+      toast.error("Operação indisponível no Modo Demo.")
+      return false
+    }
+
+    setCancelando(true)
+    try {
+      const idToken = await (user as import("firebase/auth").User).getIdToken()
+
+      const res = await fetch("/api/cancelar-assinatura", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Erro ao cancelar. Tente novamente.")
+        return false
+      }
+
+      setAssinatura((prev) => ({ ...prev, plano: "gratuito", status: "inativo", renovacaoAutomatica: false }))
+      toast.success("Assinatura cancelada. Acesso Pro válido até o fim do período.")
+      return true
+    } catch {
+      toast.error("Erro de conexão ao cancelar. Tente novamente.")
+      return false
+    } finally {
+      setCancelando(false)
+    }
+  }
+
+  // ── Ativar plano Pro com código manual (fallback admin) ──────────────────
   const ativarComCodigo = async (codigo: string): Promise<boolean> => {
     const codigoLimpo = codigo.trim().toUpperCase()
 
@@ -76,7 +152,6 @@ export function useAssinatura() {
 
     setAtivando(true)
     try {
-      // 1. Verifica se o código existe e está disponível
       const codigoRef = doc(db, "codigos_ativacao", codigoLimpo)
       const codigoSnap = await getDoc(codigoRef)
 
@@ -92,23 +167,26 @@ export function useAssinatura() {
         return false
       }
 
-      // 2. Marca o código como usado
       await updateDoc(codigoRef, {
         usado: true,
         usadoPor: user.uid,
         usadoEm: serverTimestamp(),
       })
 
-      // 3. Ativa o plano Pro do usuário
+      const expiraEm = new Date()
+      expiraEm.setDate(expiraEm.getDate() + 35)
+
       const assinaturaRef = doc(db, "assinaturas", user.uid)
       await setDoc(assinaturaRef, {
         plano: "pro",
         status: "ativo",
         codigo: codigoLimpo,
         ativadoEm: serverTimestamp(),
+        expiraEm,
+        renovacaoAutomatica: false,
       })
 
-      setAssinatura({ plano: "pro", status: "ativo", codigo: codigoLimpo })
+      setAssinatura({ plano: "pro", status: "ativo", codigo: codigoLimpo, expiraEm, renovacaoAutomatica: false })
       toast.success("🎉 Plano Pro ativado com sucesso!")
       return true
     } catch (err) {
@@ -120,5 +198,14 @@ export function useAssinatura() {
     }
   }
 
-  return { assinatura, isPro, loadingAssinatura, ativando, ativarComCodigo }
+  return {
+    assinatura,
+    isPro,
+    loadingAssinatura,
+    ativando,
+    cancelando,
+    criarAssinatura,
+    cancelarAssinatura,
+    ativarComCodigo,
+  }
 }

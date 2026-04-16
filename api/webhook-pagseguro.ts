@@ -12,48 +12,139 @@ function gerarCodigo(): string {
   return `FLOW-${parte(4)}-${parte(4)}`
 }
 
-// Consulta a API do PagSeguro para verificar se o pagamento foi aprovado
+function getTag(xml: string, tag: string): string {
+  return xml.match(new RegExp(`<${tag}>(.*?)</${tag}>`))?.[1] ?? ""
+}
+
+// ─── Consulta transação PagSeguro (pagamento avulso ou renovação) ─────────────
+
 async function verificarPagamento(notificationCode: string): Promise<{
   pago: boolean
   email: string
   nome: string
   referencia: string
+  preApprovalCode: string
 } | null> {
-  const email = process.env.PAGSEGURO_EMAIL
-  const token = process.env.PAGSEGURO_TOKEN
-
-  if (!email || !token) return null
+  const psEmail = process.env.PAGSEGURO_EMAIL
+  const psToken = process.env.PAGSEGURO_TOKEN
+  if (!psEmail || !psToken) return null
 
   try {
-    const url = `https://ws.pagseguro.uol.com.br/v3/transactions/notifications/${notificationCode}?email=${email}&token=${token}`
+    const url = `https://ws.pagseguro.uol.com.br/v3/transactions/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
     const res = await fetch(url, { headers: { Accept: "application/json" } })
-
     if (!res.ok) return null
 
     const text = await res.text()
-
-    // PagSeguro retorna XML — extrai os campos necessários
-    const getTag = (tag: string) => {
-      const match = text.match(new RegExp(`<${tag}>(.*?)<\/${tag}>`))
-      return match?.[1] ?? ""
-    }
-
-    const status = getTag("status") // 3 = pago, 4 = disponível
+    const status = getTag(text, "status")
     const pago = status === "3" || status === "4"
-    const email = getTag("email") || getTag("senderEmail")
-    const nome = getTag("name") || getTag("senderName")
-    const referencia = getTag("reference")
+    const email = getTag(text, "email")
+    const nome = getTag(text, "name")
+    const referencia = getTag(text, "reference")
+    const preApprovalCode = getTag(text, "preApprovalCode")
 
-    return { pago, email, nome, referencia }
+    return { pago, email, nome, referencia, preApprovalCode }
   } catch {
     return null
   }
 }
 
+// ─── Handler: mudança de status da assinatura recorrente ──────────────────────
+
+async function handlePreApproval(notificationCode: string): Promise<void> {
+  const psEmail = process.env.PAGSEGURO_EMAIL
+  const psToken = process.env.PAGSEGURO_TOKEN
+  if (!psEmail || !psToken) return
+
+  try {
+    const url = `https://ws.pagseguro.uol.com.br/v2/pre-approvals/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
+    const res = await fetch(url, {
+      headers: { Accept: "application/vnd.pagseguro.com.br.v3+xml" },
+    })
+    if (!res.ok) return
+
+    const text = await res.text()
+    const status = getTag(text, "status")
+    const reference = getTag(text, "reference") // "PRO-{userId}"
+    const preApprovalCode = getTag(text, "preApprovalCode")
+
+    const userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
+    if (!userId) return
+
+    const assinaturaRef = adminDb.collection("assinaturas").doc(userId)
+
+    if (status === "ACTIVE") {
+      const expiraEm = new Date()
+      expiraEm.setDate(expiraEm.getDate() + 35) // 30 dias + 5 de tolerância
+
+      await assinaturaRef.set(
+        {
+          plano: "pro",
+          status: "ativo",
+          ativadoEm: FieldValue.serverTimestamp(),
+          expiraEm,
+          psPreApprovalCode: preApprovalCode,
+          renovacaoAutomatica: true,
+        },
+        { merge: true }
+      )
+
+      // Mapa de lookup para renovações mensais
+      if (preApprovalCode) {
+        await adminDb.collection("ps_preapprovals").doc(preApprovalCode).set({ userId })
+      }
+
+      console.log(`[webhook] Pro ativado: ${userId}, expira ${expiraEm.toISOString()}`)
+    } else if (
+      status === "CANCELLED" ||
+      status === "CANCELLED_BY_SENDER" ||
+      status === "CANCELLED_BY_RECEIVER" ||
+      status === "EXPIRED"
+    ) {
+      await assinaturaRef.set(
+        {
+          plano: "gratuito",
+          status: "inativo",
+          renovacaoAutomatica: false,
+          canceladoEm: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      )
+
+      console.log(`[webhook] Assinatura cancelada: ${userId} (${status})`)
+    }
+  } catch (err) {
+    console.error("[webhook] handlePreApproval error:", err)
+  }
+}
+
+// ─── Handler: cobrança mensal de renovação ────────────────────────────────────
+
+async function handleRenovacao(preApprovalCode: string): Promise<void> {
+  const lookupSnap = await adminDb.collection("ps_preapprovals").doc(preApprovalCode).get()
+  if (!lookupSnap.exists) return
+
+  const { userId } = lookupSnap.data() as { userId: string }
+
+  const expiraEm = new Date()
+  expiraEm.setDate(expiraEm.getDate() + 35)
+
+  await adminDb.collection("assinaturas").doc(userId).set(
+    {
+      plano: "pro",
+      status: "ativo",
+      expiraEm,
+      renovacaoAutomatica: true,
+      renovadoEm: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  )
+
+  console.log(`[webhook] Renovação Pro: ${userId}, expira ${expiraEm.toISOString()}`)
+}
+
 // ─── Webhook Handler ──────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // PagSeguro só usa POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
   }
@@ -63,20 +154,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     notificationType?: string
   }
 
-  // Ignora notificações que não são de transação
-  if (notificationType !== "transaction" || !notificationCode) {
+  if (!notificationCode) {
     return res.status(200).json({ received: true })
   }
 
   try {
-    // 1. Verifica o pagamento na API do PagSeguro
-    const pagamento = await verificarPagamento(notificationCode)
+    // Mudança de status da assinatura recorrente (ativação, cancelamento)
+    if (notificationType === "preApproval") {
+      await handlePreApproval(notificationCode)
+      return res.status(200).json({ received: true })
+    }
 
+    // Somente processa transações
+    if (notificationType !== "transaction") {
+      return res.status(200).json({ received: true })
+    }
+
+    const pagamento = await verificarPagamento(notificationCode)
     if (!pagamento || !pagamento.pago) {
       return res.status(200).json({ received: true, status: "not_paid" })
     }
 
-    // 2. Evita processar o mesmo pagamento duas vezes
+    // Renovação mensal de assinatura recorrente
+    if (pagamento.preApprovalCode) {
+      await handleRenovacao(pagamento.preApprovalCode)
+      return res.status(200).json({ received: true, status: "renewal" })
+    }
+
+    // Pagamento avulso (código de ativação manual) — fluxo existente
     const jaProcessado = await adminDb
       .collection("pagamentos_processados")
       .doc(notificationCode)
@@ -86,7 +191,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ received: true, status: "already_processed" })
     }
 
-    // 3. Gera código único (tenta até 3 vezes para garantir unicidade)
     let codigo = ""
     for (let i = 0; i < 3; i++) {
       const tentativa = gerarCodigo()
@@ -97,11 +201,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    if (!codigo) {
-      throw new Error("Não foi possível gerar um código único.")
-    }
+    if (!codigo) throw new Error("Não foi possível gerar um código único.")
 
-    // 4. Salva o código no Firestore
     await adminDb.collection("codigos_ativacao").doc(codigo).set({
       usado: false,
       email: pagamento.email,
@@ -111,14 +212,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       criadoEm: FieldValue.serverTimestamp(),
     })
 
-    // 5. Marca a notificação como processada
     await adminDb.collection("pagamentos_processados").doc(notificationCode).set({
       codigo,
       email: pagamento.email,
       processadoEm: FieldValue.serverTimestamp(),
     })
 
-    // 6. Envia o código por e-mail
     await enviarCodigoAtivacao({
       para: pagamento.email,
       nomeCliente: pagamento.nome || "Cliente",
@@ -129,7 +228,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ received: true, status: "ok" })
   } catch (err) {
     console.error("[webhook] Erro:", err)
-    // Retorna 200 para o PagSeguro não ficar reenviando
     return res.status(200).json({ received: true, status: "error" })
   }
 }
