@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, ExternalLink, MessageSquare, CreditCard, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react"
+import { Plus, ExternalLink, MessageSquare, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,13 +68,16 @@ const ClienteRow = React.memo(function ClienteRow({ cliente, onAgendar }: Client
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { user, schedulingDate, schedulingTime, setSchedulingDate, setSchedulingTime } =
+  const { user, schedulingDate, schedulingTime, setSchedulingDate, setSchedulingTime, setActiveTab } =
     useAppStore()
   const { clientes } = useClientes()
   const { buscarAgendamentos, atualizarStatus, carregando } = useAgendamentosPublicos()
 
   const [agendamentos, setAgendamentos] = useState<AgendamentoPublico[]>([])
   const [atualizando, setAtualizando] = useState<string | null>(null)
+  const [onboardingFechado, setOnboardingFechado] = useState<boolean>(
+    () => localStorage.getItem("onboarding_fechado") === "true"
+  )
 
   const linkPublico = `${window.location.origin}/booking/${user?.uid ?? "demo"}`
 
@@ -131,6 +134,65 @@ export default function DashboardPage() {
         exit={{ opacity: 0, x: -20 }}
         className="space-y-6"
       >
+        {/* ── Onboarding checklist ─────────────────────────────────────── */}
+        {!onboardingFechado && clientes.length === 0 && agendamentos.length === 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" aria-hidden="true" />
+                <CardTitle className="text-base">Primeiros passos</CardTitle>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                aria-label="Fechar checklist de primeiros passos"
+                onClick={() => {
+                  localStorage.setItem("onboarding_fechado", "true")
+                  setOnboardingFechado(true)
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {[
+                {
+                  num: 1,
+                  label: "Configure seus horários",
+                  action: () => setActiveTab("configuracoes"),
+                },
+                {
+                  num: 2,
+                  label: "Compartilhe seu link de agendamento",
+                  action: () =>
+                    navigator.clipboard
+                      .writeText(linkPublico)
+                      .then(() => toast.success("Link copiado!"))
+                      .catch(() => toast.error("Não foi possível copiar o link.")),
+                },
+                {
+                  num: 3,
+                  label: "Adicione seu primeiro cliente",
+                  action: () => setActiveTab("clientes"),
+                },
+              ].map(({ num, label, action }) => (
+                <button
+                  key={num}
+                  onClick={action}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors text-left group"
+                >
+                  <span className="w-7 h-7 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center justify-center shrink-0">
+                    {num}
+                  </span>
+                  <span className="flex-1 text-sm font-medium">{label}</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" aria-hidden="true" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* ── Link público ──────────────────────────────────────────────── */}
         <Card className="glass border-white/5 p-3 flex items-center gap-3">
           <div className="flex-1">

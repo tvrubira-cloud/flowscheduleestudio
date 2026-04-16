@@ -10,6 +10,7 @@ const ClientesPage = lazy(() => import("@/pages/ClientesPage"))
 const FinanceiroPage = lazy(() => import("@/pages/FinanceiroPage"))
 const ConfiguracoesPage = lazy(() => import("@/pages/ConfiguracoesPage"))
 const AdminPage = lazy(() => import("@/pages/AdminPage"))
+const RelatoriosPage = lazy(() => import("@/pages/RelatoriosPage"))
 
 function PageLoader() {
   return (
@@ -101,6 +102,7 @@ export function AppShell() {
               {activeTab === "clientes" && <ClientesPage />}
               {activeTab === "financeiro" && <FinanceiroPage />}
               {activeTab === "configuracoes" && <ConfiguracoesPage />}
+              {activeTab === "relatorios" && <RelatoriosPage />}
               {activeTab === "admin" && <AdminPage />}
             </Suspense>
           </div>

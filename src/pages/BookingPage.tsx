@@ -117,8 +117,25 @@ export default function BookingPage() {
         status: "pendente",
       })
       setEtapa("confirmado")
-    } catch {
-      toast.error("Erro ao confirmar agendamento. Tente novamente.")
+
+      // Fire-and-forget: notifica o dono sem bloquear o agendamento
+      fetch("/api/notificar-agendamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          clienteNome: nome.trim(),
+          clienteTelefone: tel,
+          data: formatarData(dataSelecionada),
+          hora: horarioSelecionado,
+        }),
+      }).catch(() => {})
+    } catch (err) {
+      if (err instanceof Error && err.message === "LIMITE_ATINGIDO") {
+        toast.error("Este estabelecimento atingiu o limite do plano gratuito. Entre em contato com o profissional.")
+      } else {
+        toast.error("Erro ao confirmar agendamento. Tente novamente.")
+      }
     }
   }
 
@@ -192,6 +209,19 @@ export default function BookingPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Branding footer */}
+          <div className="mt-6 text-center">
+            <a
+              href="https://flowschedule-estudio.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Calendar className="w-3 h-3" />
+              Agendamento via <strong className="text-primary">FlowSchedule AI</strong> — Crie o seu grátis
+            </a>
+          </div>
         </motion.div>
       </div>
     )
@@ -394,6 +424,20 @@ export default function BookingPage() {
           )}
 
         </AnimatePresence>
+
+        {/* Branding footer */}
+        <div className="mt-8 text-center">
+          <a
+            href="https://flowschedule-estudio.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Calendar className="w-3 h-3" />
+            Agendamento via <strong className="text-primary">FlowSchedule AI</strong> — Crie o seu grátis
+          </a>
+        </div>
+
       </div>
     </div>
   )

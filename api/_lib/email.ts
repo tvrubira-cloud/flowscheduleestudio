@@ -108,6 +108,117 @@ export async function enviarLembreteAgendamento({
   })
 }
 
+interface NotificacaoDonoParams {
+  para: string
+  nomeNegocio: string
+  clienteNome: string
+  clienteTelefone: string
+  data: string   // "YYYY-MM-DD"
+  hora: string   // "HH:mm"
+}
+
+export async function enviarNotificacaoDono({
+  para,
+  nomeNegocio,
+  clienteNome,
+  clienteTelefone,
+  data,
+  hora,
+}: NotificacaoDonoParams): Promise<void> {
+  const [ano, mes, dia] = data.split("-")
+  const dataFormatada = `${dia}/${mes}/${ano}`
+
+  await resend.emails.send({
+    from: FROM,
+    to: para,
+    subject: `Novo agendamento — ${nomeNegocio}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin:0;padding:0;background:#09090b;font-family:sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="padding:40px 16px;">
+              <table width="480" cellpadding="0" cellspacing="0"
+                style="background:#18181b;border-radius:16px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+
+                <!-- Header -->
+                <tr>
+                  <td style="padding:28px 32px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);text-align:center;">
+                    <p style="margin:0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;">
+                      FlowSchedule AI
+                    </p>
+                    <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:#fff;">
+                      Novo Agendamento
+                    </h1>
+                  </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                  <td style="padding:28px 32px;">
+                    <p style="margin:0 0 20px;color:#a1a1aa;font-size:14px;line-height:1.6;">
+                      Você recebeu um novo agendamento em <strong style="color:#fff;">${nomeNegocio}</strong>.
+                    </p>
+
+                    <!-- Dados do cliente -->
+                    <table width="100%" cellpadding="0" cellspacing="0"
+                      style="background:#09090b;border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin:0 0 20px;">
+                      <tr>
+                        <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                          <p style="margin:0 0 2px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Cliente</p>
+                          <p style="margin:0;font-size:15px;font-weight:700;color:#fff;">${clienteNome}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                          <p style="margin:0 0 2px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Telefone</p>
+                          <p style="margin:0;font-size:15px;font-weight:700;color:#fff;">${clienteTelefone}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:0;">
+                          <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding:16px 20px;text-align:center;border-right:1px solid rgba(255,255,255,0.05);">
+                                <p style="margin:0 0 2px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Data</p>
+                                <p style="margin:0;font-size:18px;font-weight:800;color:#fff;">${dataFormatada}</p>
+                              </td>
+                              <td style="padding:16px 20px;text-align:center;">
+                                <p style="margin:0 0 2px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Horário</p>
+                                <p style="margin:0;font-size:18px;font-weight:800;color:#fff;">${hora}</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding:16px 32px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
+                    <p style="margin:0;color:#52525b;font-size:12px;">
+                      Notificação automática · FlowSchedule AI
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  })
+}
+
 export async function enviarCodigoAtivacao({
   para,
   nomeCliente,

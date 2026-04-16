@@ -1,6 +1,6 @@
 import {
   Calendar, LayoutDashboard, Users, CreditCard,
-  LogOut, BadgeCheck, Zap, ShieldCheck, Settings,
+  LogOut, BadgeCheck, Zap, ShieldCheck, Settings, BarChart2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
@@ -16,17 +16,24 @@ interface NavItem {
   Icon: typeof Calendar
 }
 
-const NAV_ITEMS: NavItem[] = [
+const BASE_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { id: "clientes", label: "Clientes", Icon: Users },
   { id: "financeiro", label: "Financeiro", Icon: CreditCard },
   { id: "configuracoes", label: "Configurações", Icon: Settings },
 ]
 
+const RELATORIOS_ITEM: NavItem = { id: "relatorios", label: "Relatórios", Icon: BarChart2 }
+
 export function Sidebar() {
   const { activeTab, setActiveTab, user } = useAppStore()
   const { sair } = useAuth()
-  const { isPro } = useAssinatura()
+  const { isPro, isTrialing } = useAssinatura()
+
+  const hasFullAccess = isPro || isTrialing
+  const NAV_ITEMS = hasFullAccess
+    ? [...BASE_NAV_ITEMS, RELATORIOS_ITEM]
+    : BASE_NAV_ITEMS
 
   const isAdmin = !!user?.email && user.email === ADMIN_EMAIL
 

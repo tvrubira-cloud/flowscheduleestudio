@@ -56,4 +56,4 @@ export interface AgendamentoPublico {
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
-export type ActiveTab = "dashboard" | "clientes" | "financeiro" | "configuracoes" | "admin"
+export type ActiveTab = "dashboard" | "clientes" | "financeiro" | "configuracoes" | "relatorios" | "admin"
