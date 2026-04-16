@@ -1,17 +1,13 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Calendar, ChevronRight } from "lucide-react"
+import { Calendar } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/hooks/useAuth"
 import { authSchema } from "@/lib/validations"
 
-interface LoginFormProps {
-  onDemoLogin: () => void
-}
-
-export function LoginForm({ onDemoLogin }: LoginFormProps) {
+export function LoginForm() {
   const { login, registrar } = useAuth()
 
   const [email, setEmail] = useState("")
@@ -64,14 +60,14 @@ export function LoginForm({ onDemoLogin }: LoginFormProps) {
               <Calendar className="text-primary w-6 h-6" aria-hidden="true" />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">FlowSchedule AI</CardTitle>
-            <CardDescription>Acesse sua conta ou use o modo demonstração</CardDescription>
+            <CardDescription>
+              Crie sua conta e experimente grátis por <strong className="text-white">7 dias</strong>
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="grid gap-4 mt-2">
             <div className="grid gap-1">
-              <label htmlFor="email" className="text-sm font-medium">
-                E-mail
-              </label>
+              <label htmlFor="email" className="text-sm font-medium">E-mail</label>
               <Input
                 id="email"
                 type="email"
@@ -84,16 +80,12 @@ export function LoginForm({ onDemoLogin }: LoginFormProps) {
                 autoComplete="email"
               />
               {errors.email && (
-                <p id="email-error" role="alert" className="text-xs text-red-400 mt-1">
-                  {errors.email}
-                </p>
+                <p id="email-error" role="alert" className="text-xs text-red-400 mt-1">{errors.email}</p>
               )}
             </div>
 
             <div className="grid gap-1">
-              <label htmlFor="senha" className="text-sm font-medium">
-                Senha
-              </label>
+              <label htmlFor="senha" className="text-sm font-medium">Senha</label>
               <Input
                 id="senha"
                 type="password"
@@ -107,9 +99,7 @@ export function LoginForm({ onDemoLogin }: LoginFormProps) {
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
               {errors.senha && (
-                <p id="senha-error" role="alert" className="text-xs text-red-400 mt-1">
-                  {errors.senha}
-                </p>
+                <p id="senha-error" role="alert" className="text-xs text-red-400 mt-1">{errors.senha}</p>
               )}
             </div>
 
@@ -127,30 +117,13 @@ export function LoginForm({ onDemoLogin }: LoginFormProps) {
                 disabled={loading}
                 className="border-white/10 hover:bg-white/5 h-11 text-xs uppercase font-semibold"
               >
-                Cadastrar
+                {loading ? "Criando..." : "Cadastrar"}
               </Button>
             </div>
 
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-950 px-2 text-muted-foreground">Ou experimente agora</span>
-              </div>
-            </div>
-
-            <Button
-              variant="secondary"
-              onClick={onDemoLogin}
-              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 h-11 font-bold text-primary group"
-            >
-              ENTRAR NO MODO DEMO
-              <ChevronRight
-                className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
-                aria-hidden="true"
-              />
-            </Button>
+            <p className="text-center text-xs text-muted-foreground mt-1">
+              Ao cadastrar, você ganha <strong className="text-white">7 dias grátis</strong> com todos os recursos Pro.
+            </p>
           </CardContent>
         </Card>
       </motion.div>

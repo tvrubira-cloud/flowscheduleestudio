@@ -4,6 +4,7 @@ import {
 } from "firebase/firestore"
 import { db, isFirebaseConfigured } from "@/lib/firebase"
 import type { AgendamentoPublico, Disponibilidade } from "@/types"
+import { LIMITE_AGENDAMENTOS_GRATUITO } from "@/hooks/useAssinatura"
 
 // ─── Utilitário: gerar slots de horário ──────────────────────────────────────
 
@@ -62,12 +63,50 @@ export function useAgendamentosPublicos() {
     }
   }
 
+  const contarAgendamentosMes = async (userId: string): Promise<number> => {
+    if (!isFirebaseConfigured || !db) return 0
+    try {
+      const agora = new Date()
+      const ano = agora.getFullYear()
+      const mes = String(agora.getMonth() + 1).padStart(2, "0")
+      const inicioMes = `${ano}-${mes}-01`
+      const fimMes = `${ano}-${mes}-31`
+
+      const q = query(
+        collection(db, "agendamentos_publicos"),
+        where("userId", "==", userId),
+        where("data", ">=", inicioMes),
+        where("data", "<=", fimMes)
+      )
+      const snap = await getDocs(q)
+      return snap.docs.filter((d) => d.data().status !== "cancelado").length
+    } catch {
+      return 0
+    }
+  }
+
   const salvarAgendamento = async (
-    dados: Omit<AgendamentoPublico, "id" | "createdAt">
+    dados: Omit<AgendamentoPublico, "id" | "createdAt">,
+    hasFullAccess = false
   ): Promise<void> => {
     if (!isFirebaseConfigured || !db) throw new Error("Firebase não configurado")
     setSalvando(true)
     try {
+      // Verifica limite do plano gratuito (após trial)
+      if (!hasFullAccess) {
+        const assinaturaSnap = await getDoc(doc(db, "assinaturas", dados.userId))
+        const assinaturaData = assinaturaSnap.exists() ? assinaturaSnap.data() : null
+        const trialExpiraEm = assinaturaData?.trialExpiraEm?.toDate?.()
+        const isTrialing = trialExpiraEm && trialExpiraEm > new Date()
+        const isPro = assinaturaData?.plano === "pro" && assinaturaData?.status === "ativo"
+
+        if (!isTrialing && !isPro) {
+          const count = await contarAgendamentosMes(dados.userId)
+          if (count >= LIMITE_AGENDAMENTOS_GRATUITO) {
+            throw new Error(`LIMITE_ATINGIDO`)
+          }
+        }
+      }
       // 1. Sincronizar com a coleção de 'clientes' do profissional
       const clientesRef = collection(db, "clientes")
       const q = query(
@@ -130,5 +169,6 @@ export function useAgendamentosPublicos() {
     salvarAgendamento,
     buscarAgendamentos,
     atualizarStatus,
+    contarAgendamentosMes,
   }
 }

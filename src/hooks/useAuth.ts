@@ -5,19 +5,14 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from "firebase/auth"
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import toast from "react-hot-toast"
-import { auth, isFirebaseConfigured } from "@/lib/firebase"
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase"
 import { useAppStore } from "@/store/useAppStore"
 import type { AuthFormData } from "@/lib/validations"
 
-const DEMO_CLIENTS = [
-  { id: "1", nome: "Ana Costa", telefone: "11988887777" },
-  { id: "2", nome: "Bruno Lima", telefone: "11977776666" },
-  { id: "3", nome: "Carla Souza", telefone: "21966665555" },
-]
-
 export function useAuth() {
-  const { setUser, setIsDemo, setAuthLoading, setClientes, reset } = useAppStore()
+  const { setUser, setAuthLoading, reset } = useAppStore()
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
@@ -35,37 +30,54 @@ export function useAuth() {
 
   const login = async ({ email, senha }: AuthFormData) => {
     if (!isFirebaseConfigured || !auth) {
-      toast.error("Firebase não configurado. Use o Modo Demo.")
+      toast.error("Firebase não configurado.")
       return
     }
     try {
       await signInWithEmailAndPassword(auth, email, senha)
       toast.success("Login realizado com sucesso!")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro desconhecido"
-      toast.error("Falha no login: " + msg)
+      const code = (err as { code?: string }).code
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        toast.error("E-mail ou senha incorretos.")
+      } else if (code === "auth/user-not-found") {
+        toast.error("Conta não encontrada. Cadastre-se primeiro.")
+      } else {
+        toast.error("Falha no login. Tente novamente.")
+      }
     }
   }
 
   const registrar = async ({ email, senha }: AuthFormData) => {
-    if (!isFirebaseConfigured || !auth) {
-      toast.error("Firebase não configurado. Use o Modo Demo.")
+    if (!isFirebaseConfigured || !auth || !db) {
+      toast.error("Firebase não configurado.")
       return
     }
     try {
-      await createUserWithEmailAndPassword(auth, email, senha)
-      toast.success("Conta criada com sucesso!")
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro desconhecido"
-      toast.error("Falha no cadastro: " + msg)
-    }
-  }
+      const cred = await createUserWithEmailAndPassword(auth, email, senha)
 
-  const entrarDemo = () => {
-    setIsDemo(true)
-    setUser({ email: "demo@flowschedule.ai", uid: "demo-user", isDemoUser: true })
-    setClientes(DEMO_CLIENTS)
-    toast.success("Bem-vindo ao Modo Demo!")
+      // Cria trial de 7 dias automaticamente
+      const trialExpiraEm = new Date()
+      trialExpiraEm.setDate(trialExpiraEm.getDate() + 7)
+
+      await setDoc(doc(db, "assinaturas", cred.user.uid), {
+        plano: "gratuito",
+        status: "ativo",
+        trialExpiraEm,
+        criadoEm: serverTimestamp(),
+      })
+
+      toast.success("Conta criada! Aproveite seus 7 dias grátis 🎉")
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code
+      if (code === "auth/email-already-in-use") {
+        toast.error("E-mail já cadastrado. Faça login.")
+      } else if (code === "auth/weak-password") {
+        toast.error("Senha muito fraca. Use ao menos 6 caracteres.")
+      } else {
+        toast.error("Falha no cadastro. Tente novamente.")
+      }
+    }
   }
 
   const sair = async () => {
@@ -76,5 +88,5 @@ export function useAuth() {
     toast("Sessão encerrada.")
   }
 
-  return { login, registrar, entrarDemo, sair }
+  return { login, registrar, sair }
 }

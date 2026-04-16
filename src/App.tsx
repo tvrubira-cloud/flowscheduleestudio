@@ -11,8 +11,8 @@ const ClientePainelPage = lazy(() => import("@/pages/ClientePainelPage"))
 
 function AuthedApp() {
   const { user, authLoading } = useAppStore()
-  const { entrarDemo } = useAuth()
-  useClientes() // Inicializa o listener
+  useAuth()
+  useClientes()
 
   if (authLoading) {
     return (
@@ -23,7 +23,7 @@ function AuthedApp() {
   }
 
   if (!user) {
-    return <LoginForm onDemoLogin={entrarDemo} />
+    return <LoginForm />
   }
 
   return <AppShell />
