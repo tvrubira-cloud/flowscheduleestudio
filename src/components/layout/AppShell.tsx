@@ -21,10 +21,11 @@ function PageLoader() {
 }
 
 function TrialBanner() {
-  const { isTrialing, trialDaysLeft, isPro, loadingAssinatura, hasFullAccess } = useAssinatura()
+  const { isAdmin, isTrialing, trialDaysLeft, isPro, loadingAssinatura, hasFullAccess } = useAssinatura()
   const { setActiveTab } = useAppStore()
 
   if (loadingAssinatura) return null
+  if (isAdmin) return null
 
   // Trial ativo — mostra countdown
   if (isTrialing) {

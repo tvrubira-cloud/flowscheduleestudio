@@ -21,6 +21,7 @@ export interface Assinatura {
   renovacaoAutomatica?: boolean
   psPreApprovalCode?: string
   codigo?: string
+  isAdmin?: boolean
 }
 
 export function useAssinatura() {
@@ -32,10 +33,13 @@ export function useAssinatura() {
 
   const agora = new Date()
 
+  const isAdmin = !!assinatura.isAdmin
+
   const isPro =
-    assinatura.plano === "pro" &&
-    assinatura.status === "ativo" &&
-    (!assinatura.expiraEm || assinatura.expiraEm > agora)
+    isAdmin ||
+    (assinatura.plano === "pro" &&
+      assinatura.status === "ativo" &&
+      (!assinatura.expiraEm || assinatura.expiraEm > agora))
 
   const isTrialing =
     !isPro &&
@@ -46,7 +50,7 @@ export function useAssinatura() {
     ? Math.ceil((assinatura.trialExpiraEm!.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24))
     : 0
 
-  // Acesso completo = Pro pago OU dentro do trial
+  // Acesso completo = admin OU Pro pago OU dentro do trial
   const hasFullAccess = isPro || isTrialing
 
   // ── Carregar assinatura ────────────────────────────────────────────────────
@@ -71,6 +75,7 @@ export function useAssinatura() {
             renovacaoAutomatica: data.renovacaoAutomatica ?? false,
             psPreApprovalCode: data.psPreApprovalCode ?? undefined,
             codigo: data.codigo,
+            isAdmin: data.isAdmin ?? false,
           })
         }
       } catch (err) {
@@ -203,6 +208,7 @@ export function useAssinatura() {
 
   return {
     assinatura,
+    isAdmin,
     isPro,
     isTrialing,
     trialDaysLeft,

@@ -266,7 +266,7 @@ function AtivacaoComCodigo() {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function FinanceiroPage() {
-  const { isPro, isTrialing, trialDaysLeft, assinatura, loadingAssinatura } = useAssinatura()
+  const { isAdmin, isPro, isTrialing, trialDaysLeft, assinatura, loadingAssinatura } = useAssinatura()
   const [modalAberto, setModalAberto] = useState(false)
 
   return (
@@ -285,7 +285,21 @@ export default function FinanceiroPage() {
           </p>
         </div>
 
-        {!loadingAssinatura && isTrialing && (
+        {!loadingAssinatura && isAdmin && (
+          <Card className="border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="pt-4 pb-4 flex items-center gap-3">
+              <BadgeCheck className="w-5 h-5 text-yellow-400 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-yellow-400">Conta Master</p>
+                <p className="text-xs text-muted-foreground">
+                  Acesso completo permanente. Nenhuma assinatura necessária.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!loadingAssinatura && isTrialing && !isAdmin && (
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="pt-4 pb-4 flex items-center gap-3">
               <Zap className="w-5 h-5 text-primary shrink-0" />
@@ -299,7 +313,7 @@ export default function FinanceiroPage() {
           </Card>
         )}
 
-        {!loadingAssinatura && isPro && (
+        {!loadingAssinatura && isPro && !isAdmin && (
           <PlanoProAtivo
             ativadoEm={assinatura.ativadoEm}
             expiraEm={assinatura.expiraEm}
@@ -307,7 +321,7 @@ export default function FinanceiroPage() {
           />
         )}
 
-        {!isPro && (
+        {!isPro && !isAdmin && (
           <Card className="border-white/5 bg-zinc-900/20">
             <CardHeader>
               <CardTitle className="text-lg">Plano Gratuito</CardTitle>
@@ -333,7 +347,7 @@ export default function FinanceiroPage() {
           </Card>
         )}
 
-        {!isPro && (
+        {!isPro && !isAdmin && (
           <Card className="premium-gradient border-none text-white overflow-hidden relative">
             <div className="absolute top-4 right-4 opacity-10" aria-hidden="true">
               <Zap size={80} />
@@ -392,7 +406,7 @@ export default function FinanceiroPage() {
           </Card>
         )}
 
-        {!loadingAssinatura && !isPro && <AtivacaoComCodigo />}
+        {!loadingAssinatura && !isPro && !isAdmin && <AtivacaoComCodigo />}
       </motion.div>
 
       <AnimatePresence>
