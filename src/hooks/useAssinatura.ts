@@ -33,7 +33,8 @@ export function useAssinatura() {
 
   const agora = new Date()
 
-  const isAdmin = !!assinatura.isAdmin
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL as string | undefined
+  const isAdmin = !!assinatura.isAdmin || (!!adminEmail && user?.email === adminEmail)
 
   const isPro =
     isAdmin ||
