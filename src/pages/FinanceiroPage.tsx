@@ -266,7 +266,7 @@ function AtivacaoComCodigo() {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function FinanceiroPage() {
-  const { isPro, assinatura, loadingAssinatura } = useAssinatura()
+  const { isPro, isTrialing, trialDaysLeft, assinatura, loadingAssinatura } = useAssinatura()
   const [modalAberto, setModalAberto] = useState(false)
 
   return (
@@ -284,6 +284,20 @@ export default function FinanceiroPage() {
             Escolha o plano ideal para o seu negócio.
           </p>
         </div>
+
+        {!loadingAssinatura && isTrialing && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-4 pb-4 flex items-center gap-3">
+              <Zap className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-primary">Trial gratuito ativo</p>
+                <p className="text-xs text-muted-foreground">
+                  Você tem acesso completo por mais <strong className="text-white">{trialDaysLeft} dia{trialDaysLeft === 1 ? "" : "s"}</strong>. Assine Pro para não perder o acesso.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {!loadingAssinatura && isPro && (
           <PlanoProAtivo
@@ -305,7 +319,7 @@ export default function FinanceiroPage() {
                 <span className="text-muted-foreground">/mês</span>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                {["Até 10 clientes", "5 agendamentos por mês", "Link público básico"].map((f) => (
+                {["3 agendamentos por mês", "Clientes ilimitados", "Link público de agendamento"].map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-400" aria-hidden="true" />
                     {f}
