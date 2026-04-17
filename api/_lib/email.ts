@@ -18,6 +18,10 @@ interface LembreteParams {
   nomeNegocio: string
 }
 
+function throwIfResendError(result: { data: unknown; error: { message: string } | null }) {
+  if (result.error) throw new Error(`Resend: ${result.error.message}`)
+}
+
 export async function enviarLembreteAgendamento({
   para,
   nomeCliente,
@@ -28,7 +32,7 @@ export async function enviarLembreteAgendamento({
   const [ano, mes, dia] = data.split("-")
   const dataFormatada = `${dia}/${mes}/${ano}`
 
-  await resend.emails.send({
+  const r1 = await resend.emails.send({
     from: FROM,
     to: para,
     subject: `Lembrete: seu agendamento é amanhã — ${nomeNegocio}`,
@@ -106,6 +110,7 @@ export async function enviarLembreteAgendamento({
       </html>
     `,
   })
+  throwIfResendError(r1)
 }
 
 interface NotificacaoDonoParams {
@@ -128,7 +133,7 @@ export async function enviarNotificacaoDono({
   const [ano, mes, dia] = data.split("-")
   const dataFormatada = `${dia}/${mes}/${ano}`
 
-  await resend.emails.send({
+  const r2 = await resend.emails.send({
     from: FROM,
     to: para,
     subject: `Novo agendamento — ${nomeNegocio}`,
@@ -217,6 +222,7 @@ export async function enviarNotificacaoDono({
       </html>
     `,
   })
+  throwIfResendError(r2)
 }
 
 interface ConfirmacaoClienteParams {
@@ -237,7 +243,7 @@ export async function enviarConfirmacaoCliente({
   const [ano, mes, dia] = data.split("-")
   const dataFormatada = `${dia}/${mes}/${ano}`
 
-  await resend.emails.send({
+  const r3 = await resend.emails.send({
     from: FROM,
     to: para,
     subject: `Agendamento confirmado — ${nomeNegocio}`,
@@ -296,6 +302,7 @@ export async function enviarConfirmacaoCliente({
       </html>
     `,
   })
+  throwIfResendError(r3)
 }
 
 export async function enviarCodigoAtivacao({
@@ -303,7 +310,7 @@ export async function enviarCodigoAtivacao({
   nomeCliente,
   codigo,
 }: EnviarCodigoParams): Promise<void> {
-  await resend.emails.send({
+  const r4 = await resend.emails.send({
     from: FROM,
     to: para,
     subject: "🎉 Seu Plano Pro foi ativado — FlowSchedule AI",
@@ -393,4 +400,5 @@ export async function enviarCodigoAtivacao({
       </html>
     `,
   })
+  throwIfResendError(r4)
 }
