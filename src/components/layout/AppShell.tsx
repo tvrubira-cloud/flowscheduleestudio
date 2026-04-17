@@ -94,7 +94,7 @@ export function AppShell() {
                 <h1 className="text-3xl font-bold tracking-tight">
                   Bem-vindo, {user?.email?.split("@")[0] ?? "usuário"}
                 </h1>
-                <p className="text-muted-foreground">Gerencie seus clientes e agendamentos com IA. ✓ v2</p>
+                <p className="text-muted-foreground">Gerencie seus clientes e agendamentos com IA.</p>
               </div>
             </div>
 
