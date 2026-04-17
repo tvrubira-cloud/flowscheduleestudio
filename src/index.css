@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(240 10% 3.9%);
+  --color-background: hsl(238 18% 4%);
   --color-foreground: hsl(0 0% 98%);
-  --color-card: hsl(240 10% 6%);
+  --color-card: hsl(240 12% 7%);
   --color-card-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(240 10% 3.9%);
+  --color-popover: hsl(240 12% 7%);
   --color-popover-foreground: hsl(0 0% 98%);
   --color-primary: hsl(263.4 70% 50.4%);
   --color-primary-foreground: hsl(210 40% 98%);
@@ -30,15 +30,31 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background-image:
+      radial-gradient(ellipse 80% 55% at 15% 8%,  rgba(99, 102, 241, 0.14) 0%, transparent 65%),
+      radial-gradient(ellipse 65% 50% at 85% 85%, rgba(14, 165, 233, 0.10) 0%, transparent 65%),
+      radial-gradient(ellipse 55% 70% at 50% 45%, rgba(168, 85, 247, 0.07) 0%, transparent 70%);
+    background-attachment: fixed;
   }
 }
 
 @utility glass {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@utility glass-card {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 @utility premium-gradient {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+}
+
+@utility glow-primary {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05);
 }

@@ -43,7 +43,7 @@ export function Sidebar() {
       {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
       <aside
         aria-label="Navegação principal"
-        className="w-64 border-r border-white/5 bg-zinc-950/50 p-6 hidden md:flex flex-col shrink-0"
+        className="w-64 border-r border-white/[0.06] bg-black/40 backdrop-blur-xl p-6 hidden md:flex flex-col shrink-0"
       >
         <div className="flex items-center gap-3 mb-10 px-2 text-primary">
           <Calendar className="w-6 h-6" aria-hidden="true" />
@@ -100,7 +100,7 @@ export function Sidebar() {
 
       {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
       <nav aria-label="Navegação mobile"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around px-2 py-1 safe-area-pb">
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-xl border-t border-white/[0.08] flex items-center justify-around px-2 py-1 safe-area-pb">
         {ALL_ITEMS.slice(0, 5).map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setActiveTab(id as ActiveTab)}
             aria-current={activeTab === id ? "page" : undefined}

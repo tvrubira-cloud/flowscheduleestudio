@@ -90,7 +90,7 @@ export function AppShell() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative">
       <TrialBanner />
 
       <div className="flex flex-grow overflow-hidden">
