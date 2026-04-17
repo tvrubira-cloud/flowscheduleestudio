@@ -85,7 +85,7 @@ function LinkPublicoCard({ userId }: { userId?: string }) {
   }
 
   return (
-    <Card className="border-primary/20 bg-primary/5 overflow-hidden relative">
+    <Card className="border-primary/20 bg-primary/5 overflow-hidden relative h-full">
       <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
@@ -310,7 +310,7 @@ export default function DashboardPage() {
           </Button>
         </Card>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 items-stretch">
           {/* ── Lista de clientes / agendar ─────────────────────────────── */}
           <Card className="md:col-span-2 border-white/5 bg-zinc-900/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -366,9 +366,8 @@ export default function DashboardPage() {
           </Card>
 
           {/* ── Sidebar cards ────────────────────────────────────────────── */}
-          <div className="space-y-6">
+          <div className="flex flex-col">
             <LinkPublicoCard userId={user?.uid} />
-
           </div>
         </div>
 
