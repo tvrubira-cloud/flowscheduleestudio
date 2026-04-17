@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap, Link2, Copy } from "lucide-react"
+import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap, Link2, Copy, Pencil, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -134,10 +134,15 @@ export default function DashboardPage() {
   const { user, schedulingDate, schedulingTime, setSchedulingDate, setSchedulingTime, setActiveTab } =
     useAppStore()
   const { clientes } = useClientes()
-  const { buscarAgendamentos, atualizarStatus, carregando } = useAgendamentosPublicos()
+  const { buscarAgendamentos, atualizarStatus, editarAgendamento, deletarAgendamento, carregando } = useAgendamentosPublicos()
 
   const [agendamentos, setAgendamentos] = useState<AgendamentoPublico[]>([])
   const [atualizando, setAtualizando] = useState<string | null>(null)
+  const [editando, setEditando] = useState<AgendamentoPublico | null>(null)
+  const [editData, setEditData] = useState("")
+  const [editHora, setEditHora] = useState("")
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null)
   const [onboardingFechado, setOnboardingFechado] = useState<boolean>(
     () => localStorage.getItem("onboarding_fechado") === "true"
   )
@@ -170,6 +175,41 @@ export default function DashboardPage() {
       toast.error("Erro ao atualizar status.")
     } finally {
       setAtualizando(null)
+    }
+  }
+
+  const abrirEdicao = (ag: AgendamentoPublico) => {
+    setEditando(ag)
+    setEditData(ag.data)
+    setEditHora(ag.hora)
+  }
+
+  const salvarEdicao = async () => {
+    if (!editando) return
+    setSalvandoEdicao(true)
+    try {
+      await editarAgendamento(editando.id, editData, editHora)
+      setAgendamentos((prev) =>
+        prev.map((a) => a.id === editando.id ? { ...a, data: editData, hora: editHora } : a)
+      )
+      toast.success("Agendamento atualizado!")
+      setEditando(null)
+    } catch {
+      toast.error("Erro ao atualizar agendamento.")
+    } finally {
+      setSalvandoEdicao(false)
+    }
+  }
+
+  const confirmarExclusao = async (id: string) => {
+    try {
+      await deletarAgendamento(id)
+      setAgendamentos((prev) => prev.filter((a) => a.id !== id))
+      toast.success("Agendamento excluído.")
+    } catch {
+      toast.error("Erro ao excluir agendamento.")
+    } finally {
+      setConfirmandoExclusao(null)
     }
   }
 
@@ -383,36 +423,49 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
                       <StatusBadge status={ag.status} />
                       {ag.status === "pendente" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <Button size="sm" variant="ghost"
                           className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
                           disabled={atualizando === ag.id}
                           onClick={() => handleStatus(ag.id, "confirmado")}
                         >
-                          {atualizando === ag.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <CheckCircle className="w-3.5 h-3.5" />
-                          }
+                          {atualizando === ag.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
                           Confirmar
                         </Button>
                       )}
                       {ag.status !== "cancelado" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <Button size="sm" variant="ghost"
                           className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1"
                           disabled={atualizando === ag.id}
                           onClick={() => handleStatus(ag.id, "cancelado")}
                         >
-                          {atualizando === ag.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <XCircle className="w-3.5 h-3.5" />
-                          }
+                          {atualizando === ag.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
                           Cancelar
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost"
+                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                        onClick={() => abrirEdicao(ag)}
+                        aria-label="Editar agendamento"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      {confirmandoExclusao === ag.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" className="text-xs text-muted-foreground h-7 px-2"
+                            onClick={() => setConfirmandoExclusao(null)}>Não</Button>
+                          <Button size="sm" className="text-xs bg-red-600 hover:bg-red-700 text-white h-7 px-2"
+                            onClick={() => confirmarExclusao(ag.id)}>Excluir</Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="ghost"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          onClick={() => setConfirmandoExclusao(ag.id)}
+                          aria-label="Excluir agendamento"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       )}
                     </div>
@@ -423,6 +476,47 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* ── Modal editar agendamento ──────────────────────────────────── */}
+      <AnimatePresence>
+        {editando && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditando(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-white/5">
+                <div>
+                  <h2 className="text-sm font-bold">Editar Agendamento</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{editando.clienteNome}</p>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => setEditando(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase">Data</label>
+                    <Input type="date" value={editData} onChange={(e) => setEditData(e.target.value)} className="bg-zinc-800" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase">Hora</label>
+                    <Input type="time" value={editHora} onChange={(e) => setEditHora(e.target.value)} className="bg-zinc-800" />
+                  </div>
+                </div>
+                <Button onClick={salvarEdicao} disabled={salvandoEdicao || !editData || !editHora} className="w-full gap-2">
+                  {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  Salvar alteração
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   )
 }
