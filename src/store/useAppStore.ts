@@ -54,7 +54,7 @@ export const useAppStore = create<AppState>()(
       setActiveTab: (activeTab) => set({ activeTab }),
       setSchedulingDate: (schedulingDate) => set({ schedulingDate }),
       setSchedulingTime: (schedulingTime) => set({ schedulingTime }),
-      reset: () => set(initialState),
+      reset: () => set({ ...initialState, authLoading: false }),
     }),
     {
       name: "flowschedule-storage",
