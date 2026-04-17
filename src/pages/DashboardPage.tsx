@@ -327,7 +327,7 @@ export default function DashboardPage() {
           </Button>
         </Card>
 
-        <div className="grid md:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {/* ── Lista de clientes / agendar ─────────────────────────────── */}
           <Card className="md:col-span-2 border-white/5 bg-zinc-900/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -339,7 +339,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="space-y-2">
                   <label htmlFor="sched-date" className="text-xs font-bold text-muted-foreground uppercase">
                     Data
