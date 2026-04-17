@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import { adminAuth, adminDb } from "./_lib/firebase-admin"
-import { enviarNotificacaoDono } from "./_lib/email"
+import { enviarNotificacaoDono, enviarConfirmacaoCliente } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -9,11 +9,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { userId, clienteNome, clienteTelefone, clienteUid, data, hora } = req.body as {
+    const { userId, clienteNome, clienteTelefone, clienteUid, clienteEmail, data, hora } = req.body as {
       userId: string
       clienteNome: string
       clienteTelefone: string
       clienteUid?: string
+      clienteEmail?: string
       data: string
       hora: string
     }
@@ -54,6 +55,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       data,
       hora,
     })
+
+    if (clienteEmail) {
+      try {
+        await enviarConfirmacaoCliente({
+          para: clienteEmail,
+          nomeCliente: clienteNome,
+          data,
+          hora,
+          nomeNegocio,
+        })
+        console.log(`[notificar-agendamento] Confirmação enviada para cliente: ${clienteEmail}`)
+      } catch (err) {
+        console.error("[notificar-agendamento] erro ao enviar email ao cliente:", err)
+      }
+    }
 
     return res.status(200).json({ ok: true })
   } catch (err) {
