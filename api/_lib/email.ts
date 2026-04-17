@@ -219,6 +219,85 @@ export async function enviarNotificacaoDono({
   })
 }
 
+interface ConfirmacaoClienteParams {
+  para: string
+  nomeCliente: string
+  data: string
+  hora: string
+  nomeNegocio: string
+}
+
+export async function enviarConfirmacaoCliente({
+  para,
+  nomeCliente,
+  data,
+  hora,
+  nomeNegocio,
+}: ConfirmacaoClienteParams): Promise<void> {
+  const [ano, mes, dia] = data.split("-")
+  const dataFormatada = `${dia}/${mes}/${ano}`
+
+  await resend.emails.send({
+    from: FROM,
+    to: para,
+    subject: `Agendamento confirmado — ${nomeNegocio}`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+      <body style="margin:0;padding:0;background:#09090b;font-family:sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="padding:40px 16px;">
+              <table width="480" cellpadding="0" cellspacing="0"
+                style="background:#18181b;border-radius:16px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+                <tr>
+                  <td style="padding:32px;background:linear-gradient(135deg,#16a34a,#15803d);text-align:center;">
+                    <p style="margin:0;font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;">FlowSchedule AI</p>
+                    <h1 style="margin:8px 0 0;font-size:26px;font-weight:800;color:#fff;">✅ Agendamento Confirmado!</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:32px;">
+                    <p style="margin:0 0 16px;color:#a1a1aa;font-size:15px;line-height:1.6;">
+                      Olá, <strong style="color:#fff;">${nomeCliente}</strong>! 👋
+                    </p>
+                    <p style="margin:0 0 24px;color:#a1a1aa;font-size:15px;line-height:1.6;">
+                      Seu agendamento com <strong style="color:#fff;">${nomeNegocio}</strong> foi <strong style="color:#4ade80;">confirmado</strong>.
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0"
+                      style="background:#09090b;border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin:0 0 24px;">
+                      <tr>
+                        <td style="padding:20px;text-align:center;border-right:1px solid rgba(255,255,255,0.08);">
+                          <p style="margin:0 0 4px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Data</p>
+                          <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">${dataFormatada}</p>
+                        </td>
+                        <td style="padding:20px;text-align:center;">
+                          <p style="margin:0 0 4px;font-size:11px;color:#71717a;letter-spacing:1px;text-transform:uppercase;">Horário</p>
+                          <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">${hora}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin:0;color:#a1a1aa;font-size:14px;line-height:1.6;">
+                      Se precisar cancelar, entre em contato com <strong style="color:#fff;">${nomeNegocio}</strong> com antecedência.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.05);text-align:center;">
+                    <p style="margin:0;color:#52525b;font-size:12px;">Notificação automática · FlowSchedule AI</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+  })
+}
+
 export async function enviarCodigoAtivacao({
   para,
   nomeCliente,

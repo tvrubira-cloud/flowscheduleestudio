@@ -188,6 +188,25 @@ export default function DashboardPage() {
         prev.map((a) => (a.id === id ? { ...a, status } : a))
       )
       toast.success(status === "confirmado" ? "Agendamento confirmado!" : "Agendamento cancelado.")
+
+      // Envia email de confirmação ao cliente (fire-and-forget)
+      if (status === "confirmado" && user) {
+        const ag = agendamentos.find((a) => a.id === id)
+        if (ag?.clienteUid) {
+          fetch("/api/confirmar-agendamento", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user.uid,
+              agendamentoId: id,
+              clienteNome: ag.clienteNome,
+              clienteUid: ag.clienteUid,
+              data: ag.data,
+              hora: ag.hora,
+            }),
+          }).catch(() => {})
+        }
+      }
     } catch {
       toast.error("Erro ao atualizar status.")
     } finally {

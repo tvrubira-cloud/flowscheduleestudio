@@ -41,13 +41,15 @@ function ClienteLoginForm({ salonId }: { salonId: string }) {
 
   const handleSubmit = async () => {
     if (!email || !senha) { toast.error("Preencha e-mail e senha."); return }
+    let ok = false
     if (modo === "registro") {
       if (!nome || nome.trim().length < 2) { toast.error("Informe seu nome completo."); return }
       if (!telefone || telefone.replace(/\D/g,"").length < 10) { toast.error("Informe o WhatsApp com DDD."); return }
-      await registrar(nome, telefone, email, senha, salonId)
+      ok = await registrar(nome, telefone, email, senha, salonId)
     } else {
-      await entrar(email, senha)
+      ok = await entrar(email, senha)
     }
+    if (ok) navigate(`/booking/${salonId}`)
   }
 
   return (
