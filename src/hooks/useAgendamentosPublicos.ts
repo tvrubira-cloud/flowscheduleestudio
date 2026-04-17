@@ -107,22 +107,25 @@ export function useAgendamentosPublicos() {
           }
         }
       }
-      // 1. Sincronizar com a coleção de 'clientes' do profissional
-      const clientesRef = collection(db, "clientes")
-      const q = query(
-        clientesRef,
-        where("userId", "==", dados.userId),
-        where("telefone", "==", dados.clienteTelefone)
-      )
-      const clientSnap = await getDocs(q)
-      
-      if (clientSnap.empty) {
-        await addDoc(clientesRef, {
-          nome: dados.clienteNome,
-          telefone: dados.clienteTelefone,
-          userId: dados.userId,
-          createdAt: Timestamp.now(),
-        })
+      // 1. Sincronizar com a coleção de 'clientes' do profissional (best-effort)
+      try {
+        const clientesRef = collection(db, "clientes")
+        const q = query(
+          clientesRef,
+          where("userId", "==", dados.userId),
+          where("telefone", "==", dados.clienteTelefone)
+        )
+        const clientSnap = await getDocs(q)
+        if (clientSnap.empty) {
+          await addDoc(clientesRef, {
+            nome: dados.clienteNome,
+            telefone: dados.clienteTelefone,
+            userId: dados.userId,
+            createdAt: Timestamp.now(),
+          })
+        }
+      } catch {
+        // Não bloqueia o agendamento se a sincronização falhar
       }
 
       // 2. Salvar o agendamento
