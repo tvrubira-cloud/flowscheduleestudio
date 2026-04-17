@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate, Navigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle } from "lucide-react"
+import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle, MessageSquare } from "lucide-react"
 import { useClienteAuth } from "@/hooks/useClienteAuth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,8 +18,7 @@ function gerarDatasDisponiveis(diasSemana: number[], qtd = 30): Date[] {
   const datas: Date[] = []
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
-  let cursor = new Date(hoje)
-  cursor.setDate(cursor.getDate() + 1) // começa amanhã
+  let cursor = new Date(hoje) // começa hoje
 
   while (datas.length < qtd) {
     if (diasSemana.includes(cursor.getDay())) {
@@ -57,6 +56,7 @@ export default function BookingPage() {
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
+  const [mensagem, setMensagem] = useState("")
 
   useEffect(() => {
     if (!userId) return
@@ -79,12 +79,22 @@ export default function BookingPage() {
     if (!disponibilidade || !userId) return
     setCarregandoSlots(true)
     const ocupados = await buscarHorariosOcupados(userId, formatarData(data))
-    const livres = gerarSlots(
+    let livres = gerarSlots(
       disponibilidade.horarioInicio,
       disponibilidade.horarioFim,
       disponibilidade.duracaoMinutos,
       ocupados
     )
+    // Para hoje: remove slots que já passaram
+    const hoje = new Date()
+    const isHoje = formatarData(data) === formatarData(hoje)
+    if (isHoje) {
+      const agora = hoje.getHours() * 60 + hoje.getMinutes()
+      livres = livres.filter((h) => {
+        const [hh, mm] = h.split(":").map(Number)
+        return hh * 60 + mm > agora
+      })
+    }
     setSlots(livres)
     setCarregandoSlots(false)
   }
@@ -115,6 +125,7 @@ export default function BookingPage() {
         userId,
         clienteUid: clienteLogado?.uid,
         status: "pendente",
+        ...(mensagem.trim() ? { mensagem: mensagem.trim() } : {}),
       })
       setEtapa("confirmado")
 
@@ -396,6 +407,20 @@ export default function BookingPage() {
                       value={telefone}
                       onChange={(e) => setTelefone(e.target.value)}
                       autoComplete="tel"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                      Mensagem <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                    </label>
+                    <textarea
+                      placeholder="Ex: Quero corte e barba, tenho cabelo longo..."
+                      value={mensagem}
+                      onChange={(e) => setMensagem(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                     />
                   </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap, Link2, Copy, Pencil, Trash2 } from "lucide-react"
+import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap, Link2, Copy, Pencil, Trash2, MessageSquare } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -457,6 +457,14 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Mensagem do cliente */}
+                    {ag.mensagem && (
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground bg-white/5 rounded-lg px-3 py-2">
+                        <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary/70" />
+                        <span>{ag.mensagem}</span>
+                      </div>
+                    )}
 
                     {/* Linha inferior: botões de ação */}
                     <div className="flex items-center gap-2 flex-wrap border-t border-white/5 pt-2">
