@@ -157,9 +157,7 @@ export default function DashboardPage() {
       toast.error(result.error.issues[0].message)
       return
     }
-    const msg = `Olá ${cliente.nome}, seu agendamento está confirmado para ${schedulingDate} às ${schedulingTime}.`
-    const url = `https://wa.me/55${cliente.telefone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`
-    window.open(url, "_blank", "noopener,noreferrer")
+    toast.success(`Agendamento registrado para ${cliente.nome} em ${schedulingDate} às ${schedulingTime}.`)
   }
 
   const handleStatus = async (id: string, status: AgendamentoPublico["status"]) => {
@@ -177,9 +175,7 @@ export default function DashboardPage() {
     }
   }
 
-  const pagarPlano = () => {
-    window.open("https://pag.ae/81FCjY2jo", "_blank", "noopener,noreferrer")
-  }
+  const pagarPlano = () => setActiveTab("financeiro")
 
   // Ordena por data e hora
   const agendamentosOrdenados = [...agendamentos].sort((a, b) => {
@@ -281,9 +277,9 @@ export default function DashboardPage() {
           <Card className="md:col-span-2 border-white/5 bg-zinc-900/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle>Agendar via WhatsApp</CardTitle>
+                <CardTitle>Novo Agendamento</CardTitle>
                 <CardDescription>
-                  Escolha data e hora, depois clique em Agendar para abrir o WhatsApp com a mensagem pronta
+                  Selecione o cliente, data e horário para registrar um agendamento
                 </CardDescription>
               </div>
             </CardHeader>
