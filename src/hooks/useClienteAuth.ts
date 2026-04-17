@@ -12,9 +12,6 @@ import {
   getDoc,
   Timestamp,
   collection,
-  query,
-  where,
-  getDocs,
   addDoc,
 } from "firebase/firestore"
 import { clienteAuth } from "@/lib/firebase-cliente"
@@ -75,22 +72,16 @@ export function useClienteAuth() {
       // 1. Salvar perfil global do cliente
       await setDoc(doc(db, "perfis_clientes", cred.user.uid), perfilData)
       
-      // 2. Sincronizar com a lista de clientes do profissional (salonId)
-      const clientesRef = collection(db, "clientes")
-      const q = query(
-        clientesRef,
-        where("userId", "==", salonId),
-        where("telefone", "==", perfilData.telefone)
-      )
-      const clientSnap = await getDocs(q)
-      
-      if (clientSnap.empty) {
-        await addDoc(clientesRef, {
+      // 2. Adiciona cliente na lista do salão (sem dedup — regras não permitem query pelo cliente)
+      try {
+        await addDoc(collection(db, "clientes"), {
           nome: perfilData.nome,
           telefone: perfilData.telefone,
           userId: salonId,
           createdAt: Timestamp.now(),
         })
+      } catch {
+        // Não bloqueia o cadastro se a sincronização falhar
       }
 
       setPerfil(perfilData)

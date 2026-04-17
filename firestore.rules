@@ -3,37 +3,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Clientes ──────────────────────────────────────────────────────────────
-    // Cada usuário só acessa os próprios clientes
+    // ── Disponibilidade ───────────────────────────────────────────────────────
+    // Qualquer um pode ler (página pública não requer login)
+    match /disponibilidade/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Agendamentos públicos ─────────────────────────────────────────────────
+    // Clientes públicos criam sem autenticação (auth vive em instância separada)
+    // Dono (autenticado na instância principal) lê / atualiza / deleta os próprios
+    match /agendamentos_publicos/{agId} {
+      allow create: if request.resource.data.userId is string
+        && request.resource.data.clienteNome is string
+        && request.resource.data.clienteTelefone is string
+        && request.resource.data.data is string
+        && request.resource.data.hora is string;
+
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // ── Perfis de clientes ────────────────────────────────────────────────────
+    // Escritos durante o cadastro pelo link público — sem auth da instância principal
+    match /perfis_clientes/{clienteId} {
+      allow read, write: if true;
+    }
+
+    // ── Clientes do salão ─────────────────────────────────────────────────────
+    // Dono lê e gerencia; qualquer um pode criar (booking sincroniza cliente)
     match /clientes/{clienteId} {
-      allow read, write: if request.auth != null
+      allow read, update, delete: if request.auth != null
         && request.auth.uid == resource.data.userId;
 
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.nome is string
+      allow create: if request.resource.data.nome is string
         && request.resource.data.nome.size() >= 2
         && request.resource.data.telefone is string
-        && request.resource.data.telefone.size() >= 10;
+        && request.resource.data.telefone.size() >= 10
+        && request.resource.data.userId is string;
     }
 
     // ── Assinaturas ───────────────────────────────────────────────────────────
-    // Qualquer autenticado pode ler (necessário para a página de agendamento
-    // verificar o limite do dono do salão). Escrita só pelo próprio usuário.
+    // Leitura livre (booking precisa checar limite do plano do dono)
     match /assinaturas/{userId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // ── Códigos de ativação ───────────────────────────────────────────────────
-    // Qualquer usuário autenticado pode ler e usar um código (a lógica de validação fica no app)
     match /codigos_ativacao/{codigoId} {
       allow read: if request.auth != null;
       allow update: if request.auth != null
         && resource.data.usado == false
         && request.resource.data.usado == true
         && request.resource.data.usadoPor == request.auth.uid;
-      allow create, delete: if false; // somente você cria pelo Console
+      allow create, delete: if false;
     }
 
   }
