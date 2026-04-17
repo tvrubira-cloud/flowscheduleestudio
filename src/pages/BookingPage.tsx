@@ -241,7 +241,7 @@ export default function BookingPage() {
           {/* Branding footer */}
           <div className="mt-6 text-center">
             <a
-              href="https://flowschedule-estudio.vercel.app"
+              href="https://www.flowschedule.online"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -505,7 +505,7 @@ export default function BookingPage() {
         {/* Branding footer */}
         <div className="mt-8 text-center">
           <a
-            href="https://flowschedule-estudio.vercel.app"
+            href="https://www.flowschedule.online"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"

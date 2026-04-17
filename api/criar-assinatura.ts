@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const appUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : "https://flowschedule-estudio.vercel.app"
+    : "https://www.flowschedule.online"
 
   const params = new URLSearchParams({
     currency: "BRL",
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     preApprovalMaxTotalAmount: "9999.00",
     preApprovalExpirationValue: "10",
     preApprovalExpirationUnit: "YEARS",
-    redirectURL: `${appUrl}/financeiro?ps=ok`,
+    redirectURL: `${appUrl}/?ps=ok`,
     notificationURL: `${appUrl}/api/webhook-pagseguro`,
   })
 

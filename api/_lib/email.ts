@@ -366,7 +366,7 @@ export async function enviarCodigoAtivacao({
                       <li>Digite o código acima e clique em <strong style="color:#fff;">Ativar Plano Pro</strong></li>
                     </ol>
 
-                    <a href="https://flowschedule-estudio.vercel.app"
+                    <a href="https://www.flowschedule.online"
                        style="display:block;background:linear-gradient(135deg,#1d4ed8,#7c3aed);
                               color:#fff;text-decoration:none;text-align:center;padding:14px;
                               border-radius:10px;font-weight:700;font-size:15px;">
