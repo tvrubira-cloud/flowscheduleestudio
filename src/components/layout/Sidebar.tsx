@@ -1,6 +1,6 @@
 import {
   Calendar, LayoutDashboard, Users, CreditCard,
-  LogOut, BadgeCheck, Zap, ShieldCheck, Settings, BarChart2,
+  LogOut, BadgeCheck, Zap, ShieldCheck, Settings, BarChart2, Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
@@ -90,7 +90,13 @@ export function Sidebar() {
           )}
         </div>
 
-        <div className="pt-3 border-t border-white/5">
+        <div className="pt-3 border-t border-white/5 space-y-1">
+          <a
+            href="mailto:suporteflowschedule@gmail.com"
+            className="w-full flex items-center gap-3 px-3 h-11 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+          >
+            <Mail className="w-4 h-4 shrink-0" aria-hidden="true" />Suporte
+          </a>
           <Button variant="ghost" onClick={sair}
             className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive h-11">
             <LogOut className="w-4 h-4" aria-hidden="true" />Sair

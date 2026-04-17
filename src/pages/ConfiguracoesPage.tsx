@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Settings, Copy, Check, Loader2, Calendar, Clock } from "lucide-react"
+import { Settings, Copy, Check, Loader2, Calendar, Clock, Mail } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -222,6 +222,27 @@ export default function ConfiguracoesPage() {
               : "Salvar Configurações"
             }
           </Button>
+        </CardContent>
+      </Card>
+      {/* Suporte */}
+      <Card className="border-white/5 bg-zinc-900/20">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Mail className="w-4 h-4 text-primary" aria-hidden="true" />
+            Suporte
+          </CardTitle>
+          <CardDescription>
+            Dúvidas ou problemas? Entre em contato com nossa equipe.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <a
+            href="mailto:suporteflowschedule@gmail.com"
+            className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors font-mono"
+          >
+            <Mail className="w-4 h-4" />
+            suporteflowschedule@gmail.com
+          </a>
         </CardContent>
       </Card>
     </motion.div>
