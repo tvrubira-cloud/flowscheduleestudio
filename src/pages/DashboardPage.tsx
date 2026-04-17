@@ -365,10 +365,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* ── Sidebar cards ────────────────────────────────────────────── */}
-          <div className="flex flex-col">
-            <LinkPublicoCard userId={user?.uid} />
-          </div>
+          <LinkPublicoCard userId={user?.uid} />
         </div>
 
         {/* ── Agendamentos pelo link público ────────────────────────────── */}
