@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap } from "lucide-react"
+import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap, Link2, Copy, Share2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -64,6 +64,71 @@ const ClienteRow = React.memo(function ClienteRow({ cliente, onAgendar }: Client
     </motion.div>
   )
 })
+
+// ─── Card: link público ───────────────────────────────────────────────────────
+
+function LinkPublicoCard({ userId }: { userId?: string }) {
+  const link = userId ? `${window.location.origin}/booking/${userId}` : ""
+  const [copiado, setCopiado] = useState(false)
+
+  const copiar = async () => {
+    if (!link) return
+    await navigator.clipboard.writeText(link)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+
+  const compartilhar = async () => {
+    if (!link) return
+    if (navigator.share) {
+      await navigator.share({ title: "Agende seu horário", url: link })
+    } else {
+      await copiar()
+    }
+  }
+
+  return (
+    <Card className="border-primary/20 bg-primary/5 overflow-hidden relative">
+      <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Link2 className="w-4 h-4 text-primary" />
+          Seu link de agendamento
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Compartilhe com seus clientes para receberem agendamentos 24h por dia.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-3 py-2">
+          <span className="text-xs text-muted-foreground truncate flex-1 font-mono">
+            {link || "Carregando..."}
+          </span>
+          <button
+            onClick={copiar}
+            className="shrink-0 text-muted-foreground hover:text-white transition-colors"
+            aria-label="Copiar link"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {copiado && (
+          <p className="text-xs text-green-400 text-center">Link copiado!</p>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-white/10" onClick={copiar}>
+            <Copy className="w-3 h-3" /> Copiar link
+          </Button>
+          <Button size="sm" className="h-8 text-xs gap-1.5 premium-gradient border-none" onClick={compartilhar}>
+            <Share2 className="w-3 h-3" /> Compartilhar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
@@ -268,26 +333,7 @@ export default function DashboardPage() {
 
           {/* ── Sidebar cards ────────────────────────────────────────────── */}
           <div className="space-y-6">
-            <Card className="border-white/5 bg-zinc-900/20">
-              <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  Plano Pro
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">R$ 49.90</span>
-                  <span className="text-muted-foreground">/mês</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Desbloqueie agendamentos ilimitados e integração total com CRM.
-                </p>
-                <Button onClick={pagarPlano} className="w-full gap-2">
-                  <CreditCard className="w-4 h-4" aria-hidden="true" />
-                  Assinar Agora
-                </Button>
-              </CardContent>
-            </Card>
+            <LinkPublicoCard userId={user?.uid} />
 
           </div>
         </div>
