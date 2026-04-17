@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate, Navigate } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle, MessageSquare } from "lucide-react"
+import { Calendar, Clock, User, Phone, CheckCircle, Loader2, UserCircle, MessageSquare, Mail, Lock } from "lucide-react"
 import { useClienteAuth } from "@/hooks/useClienteAuth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,7 @@ type Etapa = "data" | "horario" | "dados" | "confirmado"
 export default function BookingPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { cliente: clienteLogado, perfil: perfilCliente, loading } = useClienteAuth()
+  const { cliente: clienteLogado, perfil: perfilCliente, loading: loadingAuth, registrar, entrar } = useClienteAuth()
   const { buscarDisponibilidade, buscarHorariosOcupados, salvarAgendamento, salvando } =
     useAgendamentosPublicos()
 
@@ -54,9 +54,14 @@ export default function BookingPage() {
   const [slots, setSlots] = useState<string[]>([])
   const [carregandoSlots, setCarregandoSlots] = useState(false)
 
+  // Dados do cliente
+  const [modoAuth, setModoAuth] = useState<"cadastro" | "login">("cadastro")
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
+  const [email, setEmail] = useState("")
+  const [senha, setSenha] = useState("")
   const [mensagem, setMensagem] = useState("")
+  const [processandoAuth, setProcessandoAuth] = useState(false)
 
   useEffect(() => {
     if (!userId) return
@@ -64,12 +69,16 @@ export default function BookingPage() {
       setDisponibilidade(d)
       setCarregando(false)
     })
-    // Pré-preenche dados do cliente logado
+  }, [userId])
+
+  // Pré-preenche dados quando cliente já está logado
+  useEffect(() => {
     if (perfilCliente) {
       setNome(perfilCliente.nome)
       setTelefone(perfilCliente.telefone)
+      setEmail(perfilCliente.email)
     }
-  }, [userId, perfilCliente])
+  }, [perfilCliente])
 
   const selecionarData = async (data: Date) => {
     setDataSelecionada(data)
@@ -105,38 +114,60 @@ export default function BookingPage() {
   }
 
   const confirmar = async () => {
-    if (!nome.trim() || nome.trim().length < 2) {
-      toast.error("Informe seu nome completo.")
-      return
-    }
-    const tel = telefone.replace(/\D/g, "")
-    if (tel.length < 10) {
-      toast.error("Informe um telefone com DDD.")
-      return
-    }
     if (!dataSelecionada || !horarioSelecionado || !userId) return
 
+    setProcessandoAuth(true)
     try {
+      let uid = clienteLogado?.uid
+      let nomeFinal = nome.trim()
+      let telFinal = telefone.replace(/\D/g, "")
+
+      // Se não está logado, faz cadastro ou login
+      if (!clienteLogado) {
+        if (!email || !senha) { toast.error("Informe e-mail e senha."); return }
+
+        if (modoAuth === "cadastro") {
+          if (!nomeFinal || nomeFinal.length < 2) { toast.error("Informe seu nome completo."); return }
+          if (telFinal.length < 10) { toast.error("Informe um telefone com DDD."); return }
+          const ok = await registrar(nomeFinal, telFinal, email, senha, userId)
+          if (!ok) return
+        } else {
+          const ok = await entrar(email, senha)
+          if (!ok) return
+          // perfil carregado pelo useEffect após entrar()
+          // usa nome/telefone do perfil que serão preenchidos no próximo render
+          nomeFinal = nome.trim() || email.split("@")[0]
+          telFinal = telefone.replace(/\D/g, "")
+        }
+        // uid será atualizado via onAuthStateChanged — usa email como fallback identifier
+      } else {
+        uid = clienteLogado.uid
+        nomeFinal = perfilCliente?.nome || nome.trim()
+        telFinal = (perfilCliente?.telefone || telefone).replace(/\D/g, "")
+      }
+
+      if (!nomeFinal || nomeFinal.length < 2) { toast.error("Informe seu nome completo."); return }
+      if (telFinal.length < 10) { toast.error("Informe um telefone com DDD."); return }
+
       await salvarAgendamento({
-        clienteNome: nome.trim(),
-        clienteTelefone: tel,
+        clienteNome: nomeFinal,
+        clienteTelefone: telFinal,
         data: formatarData(dataSelecionada),
         hora: horarioSelecionado,
         userId,
-        clienteUid: clienteLogado?.uid,
+        clienteUid: uid,
         status: "pendente",
         ...(mensagem.trim() ? { mensagem: mensagem.trim() } : {}),
       })
       setEtapa("confirmado")
 
-      // Fire-and-forget: notifica o dono sem bloquear o agendamento
       fetch("/api/notificar-agendamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          clienteNome: nome.trim(),
-          clienteTelefone: tel,
+          clienteNome: nomeFinal,
+          clienteTelefone: telFinal,
           data: formatarData(dataSelecionada),
           hora: horarioSelecionado,
         }),
@@ -147,26 +178,14 @@ export default function BookingPage() {
       } else {
         toast.error("Erro ao confirmar agendamento. Tente novamente.")
       }
+    } finally {
+      setProcessandoAuth(false)
     }
-  }
-
-  // ── Auth guard ─────────────────────────────────────────────────────────────
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    )
-  }
-
-  if (!clienteLogado) {
-    return <Navigate to={`/booking/${userId}/painel`} replace />
   }
 
   // ── Loading ────────────────────────────────────────────────────────────────
 
-  if (carregando) {
+  if (loadingAuth || carregando) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -383,33 +402,73 @@ export default function BookingPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                      Seu nome
-                    </label>
-                    <Input
-                      placeholder="João Silva"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      autoComplete="name"
-                    />
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                      WhatsApp (com DDD)
-                    </label>
-                    <Input
-                      type="tel"
-                      placeholder="(11) 99999-9999"
-                      value={telefone}
-                      onChange={(e) => setTelefone(e.target.value)}
-                      autoComplete="tel"
-                    />
-                  </div>
+                  {/* Cliente já logado — mostra perfil resumido */}
+                  {clienteLogado && perfilCliente ? (
+                    <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                      <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                        {perfilCliente.nome.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{perfilCliente.nome}</p>
+                        <p className="text-xs text-muted-foreground truncate">{perfilCliente.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Toggle cadastro / login */}
+                      <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+                        <button
+                          onClick={() => setModoAuth("cadastro")}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modoAuth === "cadastro" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          Primeira vez
+                        </button>
+                        <button
+                          onClick={() => setModoAuth("login")}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modoAuth === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          Já tenho conta
+                        </button>
+                      </div>
 
+                      {modoAuth === "cadastro" && (
+                        <>
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <User className="w-3.5 h-3.5 text-muted-foreground" />
+                              Nome completo
+                            </label>
+                            <Input placeholder="João Silva" value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                              WhatsApp (com DDD)
+                            </label>
+                            <Input type="tel" placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} autoComplete="tel" />
+                          </div>
+                        </>
+                      )}
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                          E-mail
+                        </label>
+                        <Input type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                          Senha {modoAuth === "cadastro" && <span className="text-xs text-muted-foreground font-normal">(mín. 6 caracteres)</span>}
+                        </label>
+                        <Input type="password" placeholder="••••••" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete={modoAuth === "cadastro" ? "new-password" : "current-password"} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Mensagem opcional */}
                   <div className="space-y-1">
                     <label className="text-sm font-medium flex items-center gap-2">
                       <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
@@ -419,28 +478,23 @@ export default function BookingPage() {
                       placeholder="Ex: Quero corte e barba, tenho cabelo longo..."
                       value={mensagem}
                       onChange={(e) => setMensagem(e.target.value)}
-                      rows={3}
+                      rows={2}
                       className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                     />
                   </div>
 
                   <Button
                     onClick={confirmar}
-                    disabled={salvando}
+                    disabled={salvando || processandoAuth}
                     className="w-full h-11 font-bold gap-2"
                   >
-                    {salvando
+                    {(salvando || processandoAuth)
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Confirmando...</>
                       : "Confirmar Agendamento"
                     }
                   </Button>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEtapa("horario")}
-                    className="text-muted-foreground w-full"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setEtapa("horario")} className="text-muted-foreground w-full">
                     ← Voltar
                   </Button>
                 </CardContent>
