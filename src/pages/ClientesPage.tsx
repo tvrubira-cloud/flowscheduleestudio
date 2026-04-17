@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { UserPlus } from "lucide-react"
+import { UserPlus, Users, Phone } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { useClientes } from "@/hooks/useClientes"
 import { clienteSchema } from "@/lib/validations"
 
 export default function ClientesPage() {
-  const { adicionarCliente } = useClientes()
+  const { clientes, adicionarCliente } = useClientes()
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
@@ -109,6 +109,30 @@ export default function ClientesPage() {
           </form>
         </CardContent>
       </Card>
+
+      {clientes.length > 0 && (
+        <Card className="border-white/5 bg-zinc-900/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="w-4 h-4" aria-hidden="true" />
+              Clientes cadastrados ({clientes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {clientes.map((c) => (
+                <li key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                  <span className="font-medium text-sm">{c.nome}</span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Phone className="w-3 h-3" />
+                    {c.telefone}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </motion.div>
   )
 }

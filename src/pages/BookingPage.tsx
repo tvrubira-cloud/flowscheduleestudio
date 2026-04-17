@@ -170,6 +170,21 @@ export default function BookingPage() {
           hora: horarioSelecionado,
         }),
       }).catch(() => {})
+
+      if (uid) {
+        fetch("/api/confirmar-agendamento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            agendamentoId: "booking",
+            clienteNome: nomeFinal,
+            clienteUid: uid,
+            data: formatarData(dataSelecionada),
+            hora: horarioSelecionado,
+          }),
+        }).catch(() => {})
+      }
     } catch (err) {
       if (err instanceof Error && err.message === "LIMITE_ATINGIDO") {
         toast.error("Este estabelecimento atingiu o limite do plano gratuito. Entre em contato com o profissional.")
