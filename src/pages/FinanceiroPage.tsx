@@ -2,7 +2,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   CreditCard, Check, Zap, ExternalLink, QrCode,
-  FileText, Key, Loader2, BadgeCheck, X, User, RefreshCw, AlertTriangle, Share2, Copy, Gift,
+  FileText, Loader2, BadgeCheck, X, User, RefreshCw, AlertTriangle, Copy, Gift,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -459,7 +459,6 @@ export default function FinanceiroPage() {
           </Card>
         )}
 
-        {!loadingAssinatura && !isPro && !isAdmin && <AtivacaoComCodigo />}
       </motion.div>
 
       <AnimatePresence>
