@@ -22,25 +22,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true, skipped: "missing fields" })
     }
 
-    // ── Sincroniza cliente na lista do salão (server-side, bypassa regras) ──
+    // ── Sincroniza cliente na lista do salão (setDoc com ID composto — sem índice) ──
     try {
-      const clientesRef = adminDb.collection("clientes")
-      const existing = await clientesRef
-        .where("userId", "==", userId)
-        .where("telefone", "==", clienteTelefone)
-        .limit(1)
-        .get()
-
-      if (existing.empty) {
-        await clientesRef.add({
-          nome: clienteNome,
-          telefone: clienteTelefone,
-          userId,
-          clienteUid: clienteUid ?? null,
-          createdAt: FieldValue.serverTimestamp(),
-        })
-        console.log(`[notificar-agendamento] Cliente adicionado: ${clienteNome} → salão ${userId}`)
-      }
+      const tel = clienteTelefone.replace(/\D/g, "")
+      const docId = `${userId}_${tel}`
+      await adminDb.collection("clientes").doc(docId).set({
+        nome: clienteNome,
+        telefone: tel,
+        userId,
+        clienteUid: clienteUid ?? null,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
+      console.log(`[notificar-agendamento] Cliente sincronizado: ${clienteNome} → salão ${userId}`)
     } catch (err) {
       console.error("[notificar-agendamento] erro ao sincronizar cliente:", err)
     }
