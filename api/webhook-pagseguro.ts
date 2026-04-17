@@ -48,6 +48,47 @@ async function verificarPagamento(notificationCode: string): Promise<{
   }
 }
 
+// ─── Bônus de indicação ───────────────────────────────────────────────────────
+
+async function aplicarBonusIndicacao(novoProUid: string): Promise<void> {
+  try {
+    const snap = await adminDb.collection("assinaturas").doc(novoProUid).get()
+    const referidoPor = snap.data()?.referidoPor as string | undefined
+    if (!referidoPor) return
+
+    const referrerRef = adminDb.collection("assinaturas").doc(referidoPor)
+    const referrerSnap = await referrerRef.get()
+    const referrerData = referrerSnap.data()
+    if (!referrerData) return
+
+    // Referrer precisa ser Pro ativo (não admin — admin já tem acesso permanente)
+    if (referrerData.isAdmin) return
+    const agora = new Date()
+    const expiraReferrer = referrerData.expiraEm?.toDate?.() as Date | undefined
+    const isReferrerPro = referrerData.plano === "pro" && referrerData.status === "ativo" && (!expiraReferrer || expiraReferrer > agora)
+    if (!isReferrerPro) return
+
+    // Só um bônus a cada 3 meses
+    const ultimoBonus = referrerData.ultimoBonusIndicacao?.toDate?.() as Date | undefined
+    const treseMesesAtras = new Date(agora.getTime() - 90 * 24 * 60 * 60 * 1000)
+    if (ultimoBonus && ultimoBonus > treseMesesAtras) return
+
+    // Estende expiraEm do referrer em 30 dias
+    const base = expiraReferrer && expiraReferrer > agora ? expiraReferrer : agora
+    const novaExpira = new Date(base)
+    novaExpira.setDate(novaExpira.getDate() + 30)
+
+    await referrerRef.update({
+      expiraEm: novaExpira,
+      ultimoBonusIndicacao: FieldValue.serverTimestamp(),
+    })
+
+    console.log(`[webhook] Bônus indicação: ${referidoPor} → expira ${novaExpira.toISOString()}`)
+  } catch (err) {
+    console.error("[webhook] aplicarBonusIndicacao error:", err)
+  }
+}
+
 // ─── Handler: mudança de status da assinatura recorrente ──────────────────────
 
 async function handlePreApproval(notificationCode: string): Promise<void> {
@@ -92,6 +133,9 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
       if (preApprovalCode) {
         await adminDb.collection("ps_preapprovals").doc(preApprovalCode).set({ userId })
       }
+
+      // Bônus de indicação — verifica se foi indicado por usuário Pro
+      await aplicarBonusIndicacao(userId)
 
       console.log(`[webhook] Pro ativado: ${userId}, expira ${expiraEm.toISOString()}`)
     } else if (

@@ -60,11 +60,15 @@ export function useAuth() {
       const trialExpiraEm = new Date()
       trialExpiraEm.setDate(trialExpiraEm.getDate() + 7)
 
+      // Captura código de indicação da URL (?ref=UID)
+      const refUID = new URLSearchParams(window.location.search).get("ref") ?? null
+
       await setDoc(doc(db, "assinaturas", cred.user.uid), {
         plano: "gratuito",
         status: "ativo",
         trialExpiraEm,
         criadoEm: serverTimestamp(),
+        ...(refUID ? { referidoPor: refUID } : {}),
       })
 
       toast.success("Conta criada! Aproveite seus 7 dias grátis 🎉")
