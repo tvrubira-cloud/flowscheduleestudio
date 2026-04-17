@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, ExternalLink, MessageSquare, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap } from "lucide-react"
+import { Plus, ExternalLink, CreditCard, CheckCircle, XCircle, Clock, Loader2, X, ChevronRight, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -289,22 +289,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/5 bg-zinc-900/20">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-green-400" aria-hidden="true" />
-                  <CardTitle className="text-sm">Aviso via WhatsApp</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Selecione data e hora, depois clique em <strong className="text-foreground">Agendar</strong> — o WhatsApp abre com a mensagem de confirmação já preenchida para você enviar ao cliente.
-                </p>
-                <p className="text-xs text-muted-foreground border-t border-white/5 pt-2">
-                  Lembretes automáticos em breve.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
