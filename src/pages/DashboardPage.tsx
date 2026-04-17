@@ -32,9 +32,10 @@ function StatusBadge({ status }: { status: AgendamentoPublico["status"] }) {
 interface ClienteRowProps {
   cliente: Cliente
   onAgendar: (c: Cliente) => void
+  salvando?: boolean
 }
 
-const ClienteRow = React.memo(function ClienteRow({ cliente, onAgendar }: ClienteRowProps) {
+const ClienteRow = React.memo(function ClienteRow({ cliente, onAgendar, salvando }: ClienteRowProps) {
   return (
     <motion.div
       whileHover={{ x: 5 }}
@@ -55,10 +56,11 @@ const ClienteRow = React.memo(function ClienteRow({ cliente, onAgendar }: Client
       <Button
         size="sm"
         onClick={() => onAgendar(cliente)}
+        disabled={salvando}
         className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
         aria-label={`Agendar para ${cliente.nome}`}
       >
-        <Plus className="w-4 h-4" aria-hidden="true" />
+        {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
         Agendar
       </Button>
     </motion.div>
@@ -134,7 +136,7 @@ export default function DashboardPage() {
   const { user, schedulingDate, schedulingTime, setSchedulingDate, setSchedulingTime, setActiveTab } =
     useAppStore()
   const { clientes } = useClientes()
-  const { buscarAgendamentos, atualizarStatus, editarAgendamento, deletarAgendamento, carregando } = useAgendamentosPublicos()
+  const { buscarAgendamentos, salvarAgendamento, atualizarStatus, editarAgendamento, deletarAgendamento, carregando, salvando } = useAgendamentosPublicos()
 
   const [agendamentos, setAgendamentos] = useState<AgendamentoPublico[]>([])
   const [atualizando, setAtualizando] = useState<string | null>(null)
@@ -154,13 +156,28 @@ export default function DashboardPage() {
     buscarAgendamentos(user.uid).then(setAgendamentos)
   }, [user])
 
-  const criarAgendamento = (cliente: Cliente) => {
+  const criarAgendamento = async (cliente: Cliente) => {
+    if (!user) return
     const result = agendamentoSchema.safeParse({ data: schedulingDate, hora: schedulingTime })
     if (!result.success) {
       toast.error(result.error.issues[0].message)
       return
     }
-    toast.success(`Agendamento registrado para ${cliente.nome} em ${schedulingDate} às ${schedulingTime}.`)
+    try {
+      await salvarAgendamento({
+        userId: user.uid,
+        clienteNome: cliente.nome,
+        clienteTelefone: cliente.telefone,
+        data: schedulingDate,
+        hora: schedulingTime,
+        status: "confirmado",
+      }, true) // hasFullAccess = true (dono criando manualmente)
+      toast.success(`Agendamento criado para ${cliente.nome}!`)
+      const atualizados = await buscarAgendamentos(user.uid)
+      setAgendamentos(atualizados)
+    } catch {
+      toast.error("Erro ao criar agendamento.")
+    }
   }
 
   const handleStatus = async (id: string, status: AgendamentoPublico["status"]) => {
@@ -357,7 +374,7 @@ export default function DashboardPage() {
                 ) : (
                   clientes.map((c) => (
                     <div key={c.id} role="listitem">
-                      <ClienteRow cliente={c} onAgendar={criarAgendamento} />
+                      <ClienteRow cliente={c} onAgendar={criarAgendamento} salvando={salvando} />
                     </div>
                   ))
                 )}
@@ -373,7 +390,7 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="flex items-center gap-2">
-                Agendamentos pelo Link Público
+                Todos os Agendamentos
                 {pendentes > 0 && (
                   <span className="text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">
                     {pendentes} pendente{pendentes > 1 ? "s" : ""}
@@ -381,7 +398,7 @@ export default function DashboardPage() {
                 )}
               </CardTitle>
               <CardDescription>
-                Clientes que agendaram pelo seu link público
+                Agendamentos criados manualmente ou pelo link público — com opção de editar e excluir
               </CardDescription>
             </div>
           </CardHeader>
