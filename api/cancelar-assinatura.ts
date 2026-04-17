@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
-import { getAuth } from "firebase-admin/auth"
+import { adminDb, adminAuth } from "./_lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -15,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let userId: string
   try {
-    const decoded = await getAuth().verifyIdToken(idToken)
+    const decoded = await adminAuth.verifyIdToken(idToken)
     userId = decoded.uid
   } catch {
     return res.status(401).json({ error: "Token inválido" })

@@ -1,9 +1,10 @@
-import { Suspense, lazy } from "react"
+import { Suspense, lazy, useEffect } from "react"
 import { Sidebar } from "./Sidebar"
 import { useAppStore } from "@/store/useAppStore"
 import { useAssinatura } from "@/hooks/useAssinatura"
 import { Zap, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import toast from "react-hot-toast"
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
 const ClientesPage = lazy(() => import("@/pages/ClientesPage"))
@@ -79,6 +80,14 @@ function TrialBanner() {
 
 export function AppShell() {
   const { activeTab, user } = useAppStore()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("ps") === "ok") {
+      toast.success("Pagamento recebido! Aguarde a confirmação — pode levar alguns minutos.", { duration: 6000 })
+      window.history.replaceState({}, "", "/")
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
