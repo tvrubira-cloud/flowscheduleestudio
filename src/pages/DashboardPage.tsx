@@ -416,18 +416,20 @@ export default function DashboardPage() {
                 {agendamentosOrdenados.map((ag) => (
                   <div
                     key={ag.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5"
+                    className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-3"
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        aria-hidden="true"
-                        className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0"
-                      >
+                    {/* Linha superior: info do cliente */}
+                    <div className="flex items-center gap-3">
+                      <div aria-hidden="true"
+                        className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0 text-sm">
                         {ag.clienteNome.charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="font-semibold">{ag.clienteNome}</p>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm">{ag.clienteNome}</p>
+                          <StatusBadge status={ag.status} />
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                           <span>{ag.clienteTelefone}</span>
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
@@ -436,49 +438,49 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
-                      <StatusBadge status={ag.status} />
+
+                    {/* Linha inferior: botões de ação */}
+                    <div className="flex items-center gap-2 flex-wrap border-t border-white/5 pt-2">
                       {ag.status === "pendente" && (
                         <Button size="sm" variant="ghost"
-                          className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
+                          className="h-7 text-xs text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
                           disabled={atualizando === ag.id}
                           onClick={() => handleStatus(ag.id, "confirmado")}
                         >
-                          {atualizando === ag.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                          {atualizando === ag.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
                           Confirmar
                         </Button>
                       )}
                       {ag.status !== "cancelado" && (
                         <Button size="sm" variant="ghost"
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1"
+                          className="h-7 text-xs text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 gap-1"
                           disabled={atualizando === ag.id}
                           onClick={() => handleStatus(ag.id, "cancelado")}
                         >
-                          {atualizando === ag.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                          {atualizando === ag.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
                           Cancelar
                         </Button>
                       )}
                       <Button size="sm" variant="ghost"
-                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                        className="h-7 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 gap-1"
                         onClick={() => abrirEdicao(ag)}
-                        aria-label="Editar agendamento"
                       >
-                        <Pencil className="w-3.5 h-3.5" />
+                        <Pencil className="w-3 h-3" /> Editar
                       </Button>
                       {confirmandoExclusao === ag.id ? (
-                        <div className="flex items-center gap-1">
-                          <Button size="sm" variant="ghost" className="text-xs text-muted-foreground h-7 px-2"
+                        <div className="flex items-center gap-1 ml-auto">
+                          <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground px-2"
                             onClick={() => setConfirmandoExclusao(null)}>Não</Button>
-                          <Button size="sm" className="text-xs bg-red-600 hover:bg-red-700 text-white h-7 px-2"
-                            onClick={() => confirmarExclusao(ag.id)}>Excluir</Button>
+                          <Button size="sm" className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white px-2"
+                            onClick={() => confirmarExclusao(ag.id)}>Confirmar exclusão</Button>
                         </div>
                       ) : (
                         <Button size="sm" variant="ghost"
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          className="h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-1 ml-auto"
                           onClick={() => setConfirmandoExclusao(ag.id)}
                           aria-label="Excluir agendamento"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3 h-3" /> Excluir
                         </Button>
                       )}
                     </div>
