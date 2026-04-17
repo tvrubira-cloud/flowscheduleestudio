@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAuth } from "firebase-admin/auth"
-import { adminDb } from "./_lib/firebase-admin"
+import { adminAuth, adminDb } from "./_lib/firebase-admin"
 import { enviarNotificacaoDono } from "./_lib/email"
+import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -9,10 +9,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { userId, clienteNome, clienteTelefone, data, hora } = req.body as {
+    const { userId, clienteNome, clienteTelefone, clienteUid, data, hora } = req.body as {
       userId: string
       clienteNome: string
       clienteTelefone: string
+      clienteUid?: string
       data: string
       hora: string
     }
@@ -21,15 +22,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true, skipped: "missing fields" })
     }
 
-    // Busca o e-mail do dono via Firebase Auth
-    const userRecord = await getAuth().getUser(userId)
-    const emailDono = userRecord.email
+    // ── Sincroniza cliente na lista do salão (server-side, bypassa regras) ──
+    try {
+      const clientesRef = adminDb.collection("clientes")
+      const existing = await clientesRef
+        .where("userId", "==", userId)
+        .where("telefone", "==", clienteTelefone)
+        .limit(1)
+        .get()
 
-    if (!emailDono) {
-      return res.status(200).json({ ok: true, skipped: "no owner email" })
+      if (existing.empty) {
+        await clientesRef.add({
+          nome: clienteNome,
+          telefone: clienteTelefone,
+          userId,
+          clienteUid: clienteUid ?? null,
+          createdAt: FieldValue.serverTimestamp(),
+        })
+        console.log(`[notificar-agendamento] Cliente adicionado: ${clienteNome} → salão ${userId}`)
+      }
+    } catch (err) {
+      console.error("[notificar-agendamento] erro ao sincronizar cliente:", err)
     }
 
-    // Busca o nome do negócio no Firestore
+    // ── Notifica o dono por email ──────────────────────────────────────────
+    const userRecord = await adminAuth.getUser(userId)
+    const emailDono = userRecord.email
+    if (!emailDono) return res.status(200).json({ ok: true, skipped: "no owner email" })
+
     const docSnap = await adminDb.collection("disponibilidade").doc(userId).get()
     const nomeNegocio = (docSnap.data()?.nomeNegocio as string | undefined) || "Seu negócio"
 
@@ -44,7 +64,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ ok: true })
   } catch (err) {
-    // Nunca falha o agendamento — apenas loga o erro e retorna 200
     console.error("[notificar-agendamento] erro:", err)
     return res.status(200).json({ ok: true, error: String(err) })
   }

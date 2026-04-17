@@ -129,17 +129,14 @@ export default function BookingPage() {
         if (modoAuth === "cadastro") {
           if (!nomeFinal || nomeFinal.length < 2) { toast.error("Informe seu nome completo."); return }
           if (telFinal.length < 10) { toast.error("Informe um telefone com DDD."); return }
-          const ok = await registrar(nomeFinal, telFinal, email, senha, userId)
-          if (!ok) return
+          uid = await registrar(nomeFinal, telFinal, email, senha, userId)
+          if (!uid) return
         } else {
-          const ok = await entrar(email, senha)
-          if (!ok) return
-          // perfil carregado pelo useEffect após entrar()
-          // usa nome/telefone do perfil que serão preenchidos no próximo render
-          nomeFinal = nome.trim() || email.split("@")[0]
-          telFinal = telefone.replace(/\D/g, "")
+          uid = await entrar(email, senha)
+          if (!uid) return
+          nomeFinal = perfilCliente?.nome || nome.trim() || email.split("@")[0]
+          telFinal = (perfilCliente?.telefone || telefone).replace(/\D/g, "")
         }
-        // uid será atualizado via onAuthStateChanged — usa email como fallback identifier
       } else {
         uid = clienteLogado.uid
         nomeFinal = perfilCliente?.nome || nome.trim()
@@ -168,6 +165,7 @@ export default function BookingPage() {
           userId,
           clienteNome: nomeFinal,
           clienteTelefone: telFinal,
+          clienteUid: uid ?? undefined,
           data: formatarData(dataSelecionada),
           hora: horarioSelecionado,
         }),

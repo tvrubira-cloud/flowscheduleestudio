@@ -56,8 +56,8 @@ export function useClienteAuth() {
     email: string,
     senha: string,
     salonId: string
-  ): Promise<boolean> => {
-    if (!isFirebaseConfigured || !db) return false
+  ): Promise<string | null> => {
+    if (!isFirebaseConfigured || !db) return null
     setProcessando(true)
     try {
       const cred = await createUserWithEmailAndPassword(clienteAuth, email, senha)
@@ -68,25 +68,10 @@ export function useClienteAuth() {
         salonId,
         createdAt: Timestamp.now(),
       }
-      
-      // 1. Salvar perfil global do cliente
       await setDoc(doc(db, "perfis_clientes", cred.user.uid), perfilData)
-      
-      // 2. Adiciona cliente na lista do salão (sem dedup — regras não permitem query pelo cliente)
-      try {
-        await addDoc(collection(db, "clientes"), {
-          nome: perfilData.nome,
-          telefone: perfilData.telefone,
-          userId: salonId,
-          createdAt: Timestamp.now(),
-        })
-      } catch {
-        // Não bloqueia o cadastro se a sincronização falhar
-      }
-
       setPerfil(perfilData)
       toast.success("Conta criada com sucesso!")
-      return true
+      return cred.user.uid
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === "auth/email-already-in-use") {
@@ -96,14 +81,14 @@ export function useClienteAuth() {
       } else {
         toast.error("Erro ao criar conta. Tente novamente.")
       }
-      return false
+      return null
     } finally {
       setProcessando(false)
     }
   }
 
-  const entrar = async (email: string, senha: string): Promise<boolean> => {
-    if (!isFirebaseConfigured) return false
+  const entrar = async (email: string, senha: string): Promise<string | null> => {
+    if (!isFirebaseConfigured) return null
     setProcessando(true)
     try {
       const cred = await signInWithEmailAndPassword(clienteAuth, email, senha)
@@ -112,10 +97,10 @@ export function useClienteAuth() {
         if (snap.exists()) setPerfil(snap.data() as PerfilCliente)
       }
       toast.success("Login realizado!")
-      return true
+      return cred.user.uid
     } catch {
       toast.error("E-mail ou senha incorretos.")
-      return false
+      return null
     } finally {
       setProcessando(false)
     }
