@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useClientes } from "@/hooks/useClientes"
 import { clienteSchema } from "@/lib/validations"
+import { enviarMensagemWA } from "@/lib/whatsapp"
+import { useAppStore } from "@/store/useAppStore"
 import type { Cliente } from "@/types"
 
 // ─── Ícone WhatsApp ───────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ function ModalEditar({ cliente, onSalvar, onFechar }: ModalEditarProps) {
 
 export default function ClientesPage() {
   const { clientes, adicionarCliente, editarCliente, deletarCliente } = useClientes()
+  const { statusWA } = useAppStore()
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
@@ -119,10 +122,16 @@ export default function ClientesPage() {
     setTelefone("")
   }
 
-  const abrirWhatsApp = (cliente: Cliente) => {
-    const numero = cliente.telefone.replace(/\D/g, "")
-    const num = numero.startsWith("55") ? numero : `55${numero}`
-    window.open(`https://wa.me/${num}`, "_blank", "noopener,noreferrer")
+  const abrirWhatsApp = async (cliente: Cliente) => {
+    await enviarMensagemWA(
+      cliente.telefone,
+      "Olá! 😊",
+      statusWA,
+      {
+        toastSucesso: `Conversa com ${cliente.nome} iniciada! Continue no WhatsApp já aberto.`,
+        toastFallback: "Abrindo WhatsApp...",
+      }
+    )
   }
 
   return (

@@ -3,7 +3,8 @@ import toast from "react-hot-toast"
 export async function enviarMensagemWA(
   tel: string,
   mensagem: string,
-  statusWA: "verificando" | "conectado" | "desconectado"
+  statusWA: "verificando" | "conectado" | "desconectado",
+  opcoes?: { toastSucesso?: string; toastFallback?: string }
 ): Promise<void> {
   const numero = tel.replace(/\D/g, "")
   const numComPais = numero.startsWith("55") ? numero : `55${numero}`
@@ -17,11 +18,11 @@ export async function enviarMensagemWA(
       })
       const d = await r.json() as { sucesso: number; falhou: number }
       if (d.sucesso > 0) {
-        toast.success("Mensagem enviada via WhatsApp!")
+        toast.success(opcoes?.toastSucesso ?? "Mensagem enviada via WhatsApp!")
         return
       }
     } catch {}
-    toast.error("Falha no envio automático — abrindo WhatsApp...")
+    toast.error(opcoes?.toastFallback ?? "Falha no envio automático — abrindo WhatsApp...")
   }
 
   window.open(
