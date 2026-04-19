@@ -19,7 +19,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     telefones.map(async (tel, i) => {
       await new Promise((r) => setTimeout(r, i * 400))
       const numero = tel.replace(/\D/g, "")
-      const to_number = numero.startsWith("55") ? numero : `55${numero}`
+      const base = numero.startsWith("55") ? numero : `55${numero}`
+      const to_number = `${base}@c.us`
 
       const r = await fetch(`${BASE}/${PHONE_ID}/sendMessage`, {
         method: "POST",
