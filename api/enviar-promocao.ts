@@ -13,22 +13,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Parâmetros inválidos" })
   }
 
+  const erros: string[] = []
+
   const resultados = await Promise.allSettled(
     telefones.map(async (tel, i) => {
-      await new Promise((r) => setTimeout(r, i * 300))
-      const to_number = `55${tel.replace(/\D/g, "")}`
+      await new Promise((r) => setTimeout(r, i * 400))
+      const numero = tel.replace(/\D/g, "")
+      const to_number = numero.startsWith("55") ? numero : `55${numero}`
+
       const r = await fetch(`${BASE}/${PHONE_ID}/sendMessage`, {
         method: "POST",
         headers: HEADERS,
         body: JSON.stringify({ to_number, type: "text", message: mensagem }),
       })
-      if (!r.ok) throw new Error(`HTTP ${r.status}`)
-      return r.json()
+
+      const body = await r.json() as { success?: boolean; message?: string }
+      console.log(`[enviar-promocao] ${to_number}:`, JSON.stringify(body))
+
+      if (!r.ok || body.success === false) {
+        throw new Error(body.message ?? `HTTP ${r.status}`)
+      }
+      return body
     })
   )
 
   const sucesso = resultados.filter((r) => r.status === "fulfilled").length
   const falhou = resultados.filter((r) => r.status === "rejected").length
-  console.log(`[enviar-promocao] sucesso=${sucesso} falhou=${falhou}`)
-  return res.status(200).json({ sucesso, falhou })
+
+  resultados.forEach((r, i) => {
+    if (r.status === "rejected") erros.push(`${telefones[i]}: ${r.reason?.message}`)
+  })
+
+  console.log(`[enviar-promocao] sucesso=${sucesso} falhou=${falhou}`, erros)
+  return res.status(200).json({ sucesso, falhou, erros })
 }

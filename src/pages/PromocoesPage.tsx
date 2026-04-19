@@ -27,7 +27,7 @@ export default function PromocoesPage() {
   const [bannerNome, setBannerNome] = useState("")
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
-  const [resultado, setResultado] = useState<{ sucesso: number; falhou: number } | null>(null)
+  const [resultado, setResultado] = useState<{ sucesso: number; falhou: number; erros?: string[] } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -116,8 +116,11 @@ export default function PromocoesPage() {
           mensagem,
         }),
       })
-      const data = await response.json() as { sucesso: number; falhou: number }
+      const data = await response.json() as { sucesso: number; falhou: number; erros?: string[] }
       setResultado(data)
+      if (data.falhou > 0 && data.erros?.length) {
+        console.error("[enviar-promocao] erros:", data.erros)
+      }
     } catch {
       setErro("Erro ao conectar com o servidor. Tente novamente.")
     } finally {
@@ -402,6 +405,9 @@ export default function PromocoesPage() {
                 ✅ {resultado.sucesso} enviado{resultado.sucesso !== 1 ? "s" : ""}
                 {resultado.falhou > 0 && ` · ❌ ${resultado.falhou} falhou${resultado.falhou !== 1 ? "ram" : ""}`}
               </p>
+              {resultado.erros && resultado.erros.length > 0 && (
+                <p className="text-xs text-red-400 mt-1">{resultado.erros[0]}</p>
+              )}
             </div>
           </CardContent>
         </Card>
