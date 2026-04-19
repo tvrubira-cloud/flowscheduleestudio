@@ -36,9 +36,7 @@ function Navbar({ onEnter }: { onEnter: () => void }) {
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg premium-gradient flex items-center justify-center shadow-lg shadow-purple-900/30">
-            <Calendar className="w-4 h-4 text-white" />
-          </div>
+          <img src="/logo.jpg" alt="FlowSchedule AI" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-semibold text-sm tracking-tight text-white">
             FlowSchedule <span className="text-purple-400">AI</span>
           </span>

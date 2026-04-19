@@ -46,8 +46,8 @@ export function Sidebar() {
         aria-label="Navegação principal"
         className="w-64 border-r border-white/[0.06] bg-black/40 backdrop-blur-xl p-6 hidden md:flex flex-col shrink-0"
       >
-        <div className="flex items-center gap-3 mb-10 px-2 text-primary">
-          <Calendar className="w-6 h-6" aria-hidden="true" />
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <img src="/logo.jpg" alt="FlowSchedule AI" className="w-8 h-8 rounded-lg object-cover" />
           <span className="font-bold text-xl tracking-tight text-foreground">FlowSchedule</span>
         </div>
 
