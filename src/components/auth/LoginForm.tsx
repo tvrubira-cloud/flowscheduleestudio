@@ -56,8 +56,8 @@ export function LoginForm() {
       >
         <Card className="border-white/5 bg-zinc-950/50 backdrop-blur-xl shadow-2xl">
           <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center mb-4">
-              <Calendar className="text-primary w-6 h-6" aria-hidden="true" />
+            <div className="mx-auto w-12 h-12 rounded-xl overflow-hidden mb-4">
+              <img src="/logo.jpg" alt="FlowSchedule AI" className="w-full h-full object-cover" />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">FlowSchedule AI</CardTitle>
             <CardDescription>
