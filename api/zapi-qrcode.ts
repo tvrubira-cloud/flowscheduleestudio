@@ -1,28 +1,21 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 
-const BASE = `https://api.maytapi.com/api/${process.env.MAYTAPI_PRODUCT_ID}`
-const PHONE_ID = process.env.MAYTAPI_PHONE_ID
-const HEADERS = { "x-maytapi-key": process.env.MAYTAPI_TOKEN!, "Content-Type": "application/json" }
+const BASE = `https://api.green-api.com/waInstance${process.env.GREENAPI_ID}`
+const TOKEN = process.env.GREENAPI_TOKEN
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end()
   try {
-    const r = await fetch(`${BASE}/${PHONE_ID}/qrCode`, { headers: HEADERS })
-    const contentType = r.headers.get("content-type") ?? ""
+    const r = await fetch(`${BASE}/qr/${TOKEN}`)
+    const d = await r.json() as { type?: string; message?: string }
 
-    // Retorna imagem direta
-    if (contentType.includes("image")) {
-      const buffer = await r.arrayBuffer()
-      const base64 = Buffer.from(buffer).toString("base64")
-      return res.status(200).json({ qr: `data:image/png;base64,${base64}` })
+    if (d.type === "qrCode" && d.message) {
+      const qr = d.message.startsWith("data:") ? d.message : `data:image/png;base64,${d.message}`
+      return res.status(200).json({ qr })
     }
 
-    // Retorna JSON com base64
-    const d = await r.json() as { data?: string; qrCode?: string; message?: string }
-    const raw = d.data ?? d.qrCode
-    if (raw) {
-      const qr = raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`
-      return res.status(200).json({ qr })
+    if (d.type === "alreadyLogged") {
+      return res.status(200).json({ qr: null, erro: "alreadyLogged" })
     }
 
     return res.status(200).json({ qr: null, erro: d.message ?? "QR não disponível" })

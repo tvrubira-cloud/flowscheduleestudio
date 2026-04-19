@@ -42,7 +42,13 @@ export default function PromocoesPage() {
     try {
       const r = await fetch("/api/zapi-qrcode")
       const d = await r.json() as { qr?: string; erro?: string }
-      if (d.qr) { setQrBase64(d.qr) } else { setQrErro(d.erro ?? "QR não disponível") }
+      if (d.qr) {
+        setQrBase64(d.qr)
+      } else if (d.erro === "alreadyLogged") {
+        verificarStatus()
+      } else {
+        setQrErro(d.erro ?? "QR não disponível")
+      }
     } catch {
       setQrErro("Erro ao carregar QR Code")
     } finally {

@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 
-const BASE = `https://api.maytapi.com/api/${process.env.MAYTAPI_PRODUCT_ID}`
-const PHONE_ID = process.env.MAYTAPI_PHONE_ID
-const HEADERS = { "x-maytapi-key": process.env.MAYTAPI_TOKEN!, "Content-Type": "application/json" }
+const BASE = `https://api.green-api.com/waInstance${process.env.GREENAPI_ID}`
+const TOKEN = process.env.GREENAPI_TOKEN
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
@@ -17,21 +16,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const resultados = await Promise.allSettled(
     telefones.map(async (tel, i) => {
-      await new Promise((r) => setTimeout(r, i * 400))
+      await new Promise((r) => setTimeout(r, i * 500))
       const numero = tel.replace(/\D/g, "")
-      const to_number = numero.startsWith("55") ? numero : `55${numero}`
+      const chatId = `${numero.startsWith("55") ? numero : `55${numero}`}@c.us`
 
-      const r = await fetch(`${BASE}/${PHONE_ID}/sendMessage`, {
+      const r = await fetch(`${BASE}/sendMessage/${TOKEN}`, {
         method: "POST",
-        headers: HEADERS,
-        body: JSON.stringify({ to_number, type: "text", message: mensagem, text: mensagem }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatId, message: mensagem }),
       })
 
-      const body = await r.json() as { success?: boolean; message?: string }
-      console.log(`[enviar-promocao] ${to_number}:`, JSON.stringify(body))
+      const body = await r.json() as { idMessage?: string; error?: string }
+      console.log(`[enviar-promocao] ${chatId}:`, JSON.stringify(body))
 
-      if (!r.ok || body.success === false) {
-        throw new Error(body.message ?? `HTTP ${r.status}`)
+      if (!r.ok || !body.idMessage) {
+        throw new Error(body.error ?? `HTTP ${r.status}`)
       }
       return body
     })
