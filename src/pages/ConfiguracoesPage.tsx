@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { Settings, Copy, Check, Loader2, Calendar, Clock, Mail, Wifi, WifiOff, CheckCircle } from "lucide-react"
+import { Settings, Copy, Check, Loader2, Calendar, Clock, Mail, Wifi, WifiOff, CheckCircle, ImagePlus, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDisponibilidade } from "@/hooks/useDisponibilidade"
 import { useAppStore } from "@/store/useAppStore"
+import { uploadLogo } from "@/lib/uploadLogo"
 import type { Disponibilidade } from "@/types"
 import toast from "react-hot-toast"
 
@@ -40,6 +41,8 @@ export default function ConfiguracoesPage() {
 
   const [form, setForm] = useState<Disponibilidade>(disponibilidade)
   const [copiado, setCopiado] = useState(false)
+  const [uploadandoLogo, setUploadandoLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // WhatsApp
   const [qrBase64, setQrBase64] = useState<string | null>(null)
@@ -101,6 +104,37 @@ export default function ConfiguracoesPage() {
     }))
   }
 
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem.")
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB.")
+      return
+    }
+    setUploadandoLogo(true)
+    try {
+      const url = await uploadLogo(file)
+      const novoForm = { ...form, logoUrl: url }
+      setForm(novoForm)
+      await salvar(novoForm)
+    } catch {
+      toast.error("Erro ao enviar logo.")
+    } finally {
+      setUploadandoLogo(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  const handleRemoverLogo = async () => {
+    const novoForm = { ...form, logoUrl: undefined }
+    setForm(novoForm)
+    await salvar(novoForm)
+  }
+
   const handleSalvar = () => {
     if (form.diasSemana.length === 0) {
       toast.error("Selecione ao menos um dia de atendimento.")
@@ -156,6 +190,61 @@ export default function ConfiguracoesPage() {
                 : <Copy className="w-4 h-4" />
               }
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Logo do salão */}
+      <Card className="border-white/5 bg-zinc-900/20">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ImagePlus className="w-4 h-4 text-primary" aria-hidden="true" />
+            Logo do estabelecimento
+          </CardTitle>
+          <CardDescription>
+            Aparece no topo do seu painel. Formatos: PNG, JPG, SVG. Máximo 2MB.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-xl border border-white/10 bg-zinc-950/50 flex items-center justify-center shrink-0 overflow-hidden">
+              {form.logoUrl
+                ? <img src={form.logoUrl} alt="Logo do salão" className="w-full h-full object-contain p-1" />
+                : <ImagePlus className="w-7 h-7 text-zinc-600" />
+              }
+            </div>
+            <div className="flex flex-col gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-white/10 gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadandoLogo}
+              >
+                {uploadandoLogo
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
+                  : <><ImagePlus className="w-3.5 h-3.5" /> {form.logoUrl ? "Trocar logo" : "Enviar logo"}</>
+                }
+              </Button>
+              {form.logoUrl && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2"
+                  onClick={handleRemoverLogo}
+                  disabled={uploadandoLogo}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Remover logo
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

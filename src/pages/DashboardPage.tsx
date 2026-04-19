@@ -274,6 +274,21 @@ export default function DashboardPage() {
         exit={{ opacity: 0, x: -20 }}
         className="space-y-6"
       >
+        {/* ── Header do negócio ────────────────────────────────────────── */}
+        <div className="flex items-center gap-4">
+          {disponibilidade.logoUrl && (
+            <div className="w-14 h-14 rounded-xl border border-white/10 bg-zinc-900/50 overflow-hidden shrink-0 flex items-center justify-center">
+              <img src={disponibilidade.logoUrl} alt="Logo do salão" className="w-full h-full object-contain p-1" />
+            </div>
+          )}
+          <div>
+            <h2 className="text-xl font-bold leading-tight">
+              {disponibilidade.nomeNegocio || "Meu Estabelecimento"}
+            </h2>
+            <p className="text-sm text-muted-foreground">Painel de agendamentos</p>
+          </div>
+        </div>
+
         {/* ── Onboarding checklist ─────────────────────────────────────── */}
         {!onboardingFechado && clientes.length === 0 && agendamentos.length === 0 && (
           <Card className="border-primary/20 bg-primary/5">

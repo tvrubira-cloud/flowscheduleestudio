@@ -40,6 +40,7 @@ export interface Disponibilidade {
   horarioFim: string       // "18:00"
   duracaoMinutos: number   // 30 | 60 | 90 | 120
   nomeNegocio: string
+  logoUrl?: string
 }
 
 export interface AgendamentoPublico {
