@@ -32,13 +32,26 @@ export default function PromocoesPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [statusWA, setStatusWA] = useState<"verificando" | "conectado" | "desconectado">("verificando")
+  const [qrTimestamp, setQrTimestamp] = useState(Date.now())
 
-  useEffect(() => {
+  const verificarStatus = () => {
+    setStatusWA("verificando")
     fetch("/api/zapi-status")
       .then((r) => r.json())
       .then((d: { conectado: boolean }) => setStatusWA(d.conectado ? "conectado" : "desconectado"))
       .catch(() => setStatusWA("desconectado"))
+  }
+
+  useEffect(() => {
+    verificarStatus()
   }, [])
+
+  // Quando desconectado, atualiza o QR a cada 30s automaticamente
+  useEffect(() => {
+    if (statusWA !== "desconectado") return
+    const interval = setInterval(() => setQrTimestamp(Date.now()), 30000)
+    return () => clearInterval(interval)
+  }, [statusWA])
 
   const toggleCliente = (id: string) => {
     setSelecionados((prev) => {
@@ -130,14 +143,50 @@ export default function PromocoesPage() {
         </div>
       </div>
 
-      {/* Alerta WhatsApp desconectado */}
+      {/* QR Code para conectar */}
       {statusWA === "desconectado" && (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/8 px-4 py-3 space-y-1">
-          <p className="text-xs font-bold text-red-400">⚠️ WhatsApp não está conectado</p>
-          <p className="text-xs text-red-300/80">
-            Acesse o painel da Z-API, abra sua instância <strong>FlowSchedule</strong> e escaneie o QR Code com o celular para conectar o WhatsApp.
-          </p>
-        </div>
+        <Card className="border-amber-400/25 bg-amber-400/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-amber-400">
+              <WifiOff className="w-4 h-4" /> Conectar WhatsApp
+            </CardTitle>
+            <CardDescription>
+              Escaneie o QR Code abaixo com seu celular para conectar o WhatsApp ao sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ol className="text-xs text-muted-foreground space-y-1 list-none">
+              <li>1. Abra o <strong>WhatsApp</strong> no seu celular</li>
+              <li>2. Toque em <strong>⋮ Menu → Dispositivos conectados → Conectar dispositivo</strong></li>
+              <li>3. Aponte a câmera para o QR Code abaixo</li>
+            </ol>
+
+            {/* QR Code */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="bg-white rounded-2xl p-3 w-48 h-48 flex items-center justify-center">
+                <img
+                  key={qrTimestamp}
+                  src={`/api/zapi-qrcode?t=${qrTimestamp}`}
+                  alt="QR Code WhatsApp"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none"
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">QR Code atualiza automaticamente a cada 30s</p>
+            </div>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full border-white/10 gap-2"
+              onClick={() => { setQrTimestamp(Date.now()); verificarStatus() }}
+            >
+              <Loader2 className="w-3.5 h-3.5" /> Já escaniei — verificar conexão
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Card: criar promoção */}
