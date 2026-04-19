@@ -19,13 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     telefones.map(async (tel, i) => {
       await new Promise((r) => setTimeout(r, i * 400))
       const numero = tel.replace(/\D/g, "")
-      const base = numero.startsWith("55") ? numero : `55${numero}`
-      const to_number = `${base}@c.us`
+      const to_number = numero.startsWith("55") ? numero : `55${numero}`
 
       const r = await fetch(`${BASE}/${PHONE_ID}/sendMessage`, {
         method: "POST",
         headers: HEADERS,
-        body: JSON.stringify({ to_number, type: "text", message: mensagem }),
+        body: JSON.stringify({ to_number, type: "text", message: mensagem, text: mensagem }),
       })
 
       const body = await r.json() as { success?: boolean; message?: string }
