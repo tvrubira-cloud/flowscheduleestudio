@@ -76,14 +76,12 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => { carregar() }, [])
   useEffect(() => { setForm(disponibilidade) }, [disponibilidade])
-  useEffect(() => { verificarStatus() }, [])
 
   useEffect(() => {
-    if (statusWA !== "desconectado") return
     buscarQr()
     const interval = setInterval(buscarQr, 30000)
     return () => clearInterval(interval)
-  }, [statusWA])
+  }, [])
 
   const linkPublico = `${window.location.origin}/booking/${user?.uid ?? ""}`
 
@@ -317,7 +315,7 @@ export default function ConfiguracoesPage() {
           </CardContent>
         )}
 
-        {statusWA === "desconectado" && (
+        {statusWA !== "conectado" && (
           <CardContent className="space-y-4">
             <ol className="text-xs text-muted-foreground space-y-1.5 list-none">
               <li>1. Abra o <strong className="text-foreground">WhatsApp</strong> no seu celular</li>

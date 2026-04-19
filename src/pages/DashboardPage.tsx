@@ -540,48 +540,48 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-      </motion.div>
 
-      {/* ── Modal editar agendamento ──────────────────────────────────── */}
-      <AnimatePresence>
-        {editando && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditando(null)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl"
-            >
-              <div className="flex items-center justify-between p-5 border-b border-white/5">
-                <div>
-                  <h2 className="text-sm font-bold">Editar Agendamento</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{editando.clienteNome}</p>
-                </div>
-                <Button size="icon" variant="ghost" onClick={() => setEditando(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">Data</label>
-                    <Input type="date" value={editData} onChange={(e) => setEditData(e.target.value)} className="bg-zinc-800" />
+        {/* ── Modal editar agendamento ──────────────────────────────────── */}
+        <AnimatePresence>
+          {editando && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEditando(null)} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-zinc-900 border border-white/10 rounded-2xl w-full max-w-sm shadow-2xl"
+              >
+                <div className="flex items-center justify-between p-5 border-b border-white/5">
+                  <div>
+                    <h2 className="text-sm font-bold">Editar Agendamento</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">{editando.clienteNome}</p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground uppercase">Hora</label>
-                    <Input type="time" value={editHora} onChange={(e) => setEditHora(e.target.value)} className="bg-zinc-800" />
-                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => setEditando(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button onClick={salvarEdicao} disabled={salvandoEdicao || !editData || !editHora} className="w-full gap-2">
-                  {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  Salvar alteração
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                <div className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Data</label>
+                      <Input type="date" value={editData} onChange={(e) => setEditData(e.target.value)} className="bg-zinc-800" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Hora</label>
+                      <Input type="time" value={editHora} onChange={(e) => setEditHora(e.target.value)} className="bg-zinc-800" />
+                    </div>
+                  </div>
+                  <Button onClick={salvarEdicao} disabled={salvandoEdicao || !editData || !editHora} className="w-full gap-2">
+                    {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    Salvar alteração
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </AnimatePresence>
   )
 }
