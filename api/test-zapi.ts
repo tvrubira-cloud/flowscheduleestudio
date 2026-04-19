@@ -1,17 +1,20 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const base = `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}`
+  const BASE = process.env.EVOLUTION_URL
+  const KEY = process.env.EVOLUTION_KEY
+  const INSTANCE = process.env.EVOLUTION_INSTANCE
 
-  const [statusRes, qrRes] = await Promise.allSettled([
-    fetch(`${base}/connected`).then(r => r.json()),
-    fetch(`${base}/qr-code`).then(r => r.text()),
+  const [stateRes, qrRes] = await Promise.allSettled([
+    fetch(`${BASE}/instance/connectionState/${INSTANCE}`, { headers: { apikey: KEY! } }).then(r => r.json()),
+    fetch(`${BASE}/instance/connect/${INSTANCE}`, { headers: { apikey: KEY! } }).then(r => r.json()),
   ])
 
   return res.status(200).json({
-    instanceId: process.env.ZAPI_INSTANCE_ID,
-    tokenPresente: !!process.env.ZAPI_TOKEN,
-    status: statusRes.status === "fulfilled" ? statusRes.value : String(statusRes.reason),
-    qrRaw: qrRes.status === "fulfilled" ? qrRes.value.slice(0, 500) : String(qrRes.reason),
+    evolutionUrl: BASE,
+    instance: INSTANCE,
+    keyPresente: !!KEY,
+    state: stateRes.status === "fulfilled" ? stateRes.value : String(stateRes.reason),
+    qr: qrRes.status === "fulfilled" ? qrRes.value : String(qrRes.reason),
   })
 }
