@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useClientes } from "@/hooks/useClientes"
+import { useDisponibilidade } from "@/hooks/useDisponibilidade"
 import { clienteSchema } from "@/lib/validations"
 import { enviarMensagemWA } from "@/lib/whatsapp"
 import { useAppStore } from "@/store/useAppStore"
@@ -93,6 +94,8 @@ function ModalEditar({ cliente, onSalvar, onFechar }: ModalEditarProps) {
 export default function ClientesPage() {
   const { clientes, adicionarCliente, editarCliente, deletarCliente } = useClientes()
   const { statusWA } = useAppStore()
+  const { disponibilidade } = useDisponibilidade()
+  const nomeNegocio = disponibilidade.nomeNegocio || "nosso salão"
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
@@ -123,7 +126,7 @@ export default function ClientesPage() {
   }
 
   const abrirWhatsApp = async (cliente: Cliente) => {
-    const texto = `Olá, ${cliente.nome}! Tudo bem? 😊 Passamos para lembrar que você pode agendar seu horário online a qualquer hora pelo nosso link de agendamento.`
+    const texto = `Olá, ${cliente.nome}! Tudo bem? 😊\n\nAqui é do *${nomeNegocio}*. Passamos para lembrar que você pode agendar seu horário online a qualquer hora pelo nosso link de agendamento.\n\nQualquer dúvida, estamos à disposição! 🙏`
     await enviarMensagemWA(cliente.telefone, texto, statusWA)
   }
 
