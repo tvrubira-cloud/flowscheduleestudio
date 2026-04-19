@@ -139,7 +139,7 @@ export default function DashboardPage() {
     useAppStore()
   const { clientes } = useClientes()
   const { buscarAgendamentos, salvarAgendamento, atualizarStatus, editarAgendamento, deletarAgendamento, carregando, salvando } = useAgendamentosPublicos()
-  const { disponibilidade } = useDisponibilidade()
+  const { disponibilidade, carregar: carregarDisponibilidade } = useDisponibilidade()
   const nomeNegocio = disponibilidade.nomeNegocio || "nosso salão"
 
   const [agendamentos, setAgendamentos] = useState<AgendamentoPublico[]>([])
@@ -158,6 +158,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user || user.uid === "demo-user") return
     buscarAgendamentos(user.uid).then(setAgendamentos)
+    carregarDisponibilidade()
   }, [user])
 
   const criarAgendamento = async (cliente: Cliente) => {
