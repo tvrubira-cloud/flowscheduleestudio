@@ -17,21 +17,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resultados = await Promise.allSettled(
     telefones.map(async (tel, i) => {
       await new Promise((r) => setTimeout(r, i * 500))
-      const numero = tel.replace(/\D/g, "")
-      const chatId = `${numero.startsWith("55") ? numero : `55${numero}`}@c.us`
-      const phoneNumber = numero.startsWith("55") ? numero : `55${numero}`
+      const digitos = tel.replace(/\D/g, "")
+      const numero = digitos.startsWith("55") ? digitos : `55${digitos}`
+      const chatId = `${numero}@c.us`
 
       const r = await fetch(`${BASE}/sendMessage/${TOKEN}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, phoneNumber, message: mensagem }),
+        body: JSON.stringify({ chatId, message: mensagem }),
       })
 
-      const body = await r.json() as { idMessage?: string; error?: string }
-      console.log(`[enviar-promocao] ${phoneNumber}:`, JSON.stringify(body))
+      const body = await r.json() as { idMessage?: string; error?: string; message?: string }
+      console.log(`[enviar-promocao] ${numero}:`, JSON.stringify(body))
 
       if (!r.ok || !body.idMessage) {
-        throw new Error(body.error ?? `HTTP ${r.status}`)
+        throw new Error(body.error ?? body.message ?? `HTTP ${r.status}`)
       }
       return body
     })
