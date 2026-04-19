@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useClientes } from "@/hooks/useClientes"
 import { clienteSchema } from "@/lib/validations"
+import { enviarMensagemWA } from "@/lib/whatsapp"
+import { useAppStore } from "@/store/useAppStore"
 import type { Cliente } from "@/types"
 
 // ─── Ícone WhatsApp ───────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ function ModalEditar({ cliente, onSalvar, onFechar }: ModalEditarProps) {
 
 export default function ClientesPage() {
   const { clientes, adicionarCliente, editarCliente, deletarCliente } = useClientes()
+  const { statusWA } = useAppStore()
 
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
@@ -119,10 +122,9 @@ export default function ClientesPage() {
     setTelefone("")
   }
 
-  const abrirWhatsApp = (cliente: Cliente) => {
-    const tel = cliente.telefone.replace(/\D/g, "")
+  const abrirWhatsApp = async (cliente: Cliente) => {
     const texto = `Olá, ${cliente.nome}! Tudo bem? 😊 Passamos para lembrar que você pode agendar seu horário online a qualquer hora pelo nosso link de agendamento.`
-    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer")
+    await enviarMensagemWA(cliente.telefone, texto, statusWA)
   }
 
   return (

@@ -80,7 +80,7 @@ function TrialBanner() {
 }
 
 export function AppShell() {
-  const { activeTab, user } = useAppStore()
+  const { activeTab, user, setStatusWA } = useAppStore()
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -88,6 +88,13 @@ export function AppShell() {
       toast.success("Pagamento recebido! Aguarde a confirmação — pode levar alguns minutos.", { duration: 6000 })
       window.history.replaceState({}, "", "/")
     }
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/zapi-status")
+      .then((r) => r.json())
+      .then((d: { conectado: boolean }) => setStatusWA(d.conectado ? "conectado" : "desconectado"))
+      .catch(() => setStatusWA("desconectado"))
   }, [])
 
   return (

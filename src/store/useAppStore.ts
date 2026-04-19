@@ -18,6 +18,9 @@ interface AppState {
   schedulingDate: string
   schedulingTime: string
 
+  // WhatsApp (não persistido)
+  statusWA: "verificando" | "conectado" | "desconectado"
+
   // Actions
   setUser: (user: AppUser | null) => void
   setIsDemo: (isDemo: boolean) => void
@@ -27,6 +30,7 @@ interface AppState {
   setActiveTab: (tab: ActiveTab) => void
   setSchedulingDate: (date: string) => void
   setSchedulingTime: (time: string) => void
+  setStatusWA: (status: "verificando" | "conectado" | "desconectado") => void
   reset: () => void
 }
 
@@ -38,6 +42,7 @@ const initialState = {
   activeTab: "dashboard" as ActiveTab,
   schedulingDate: "",
   schedulingTime: "",
+  statusWA: "verificando" as const,
 }
 
 export const useAppStore = create<AppState>()(
@@ -54,6 +59,7 @@ export const useAppStore = create<AppState>()(
       setActiveTab: (activeTab) => set({ activeTab }),
       setSchedulingDate: (schedulingDate) => set({ schedulingDate }),
       setSchedulingTime: (schedulingTime) => set({ schedulingTime }),
+      setStatusWA: (statusWA) => set({ statusWA }),
       reset: () => set({ ...initialState, authLoading: false }),
     }),
     {

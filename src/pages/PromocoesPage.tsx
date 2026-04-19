@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { Megaphone, ImagePlus, Type, X, CheckSquare, Square, Send, CheckCircle, Loader2, Wifi, WifiOff, Settings } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -8,7 +8,7 @@ import { useAppStore } from "@/store/useAppStore"
 
 export default function PromocoesPage() {
   const { clientes } = useClientes()
-  const { setActiveTab } = useAppStore()
+  const { setActiveTab, statusWA } = useAppStore()
 
   const [modo, setModo] = useState<"texto" | "banner">("texto")
   const [texto, setTexto] = useState("")
@@ -19,15 +19,6 @@ export default function PromocoesPage() {
   const [resultado, setResultado] = useState<{ sucesso: number; falhou: number; erros?: string[] } | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const [statusWA, setStatusWA] = useState<"verificando" | "conectado" | "desconectado">("verificando")
-
-  useEffect(() => {
-    fetch("/api/zapi-status")
-      .then((r) => r.json())
-      .then((d: { conectado: boolean }) => setStatusWA(d.conectado ? "conectado" : "desconectado"))
-      .catch(() => setStatusWA("desconectado"))
-  }, [])
 
   const toggleCliente = (id: string) => {
     setSelecionados((prev) => {

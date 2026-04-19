@@ -35,14 +35,13 @@ function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 export default function ConfiguracoesPage() {
-  const { user } = useAppStore()
+  const { user, statusWA, setStatusWA } = useAppStore()
   const { disponibilidade, loading, salvando, carregar, salvar } = useDisponibilidade()
 
   const [form, setForm] = useState<Disponibilidade>(disponibilidade)
   const [copiado, setCopiado] = useState(false)
 
   // WhatsApp
-  const [statusWA, setStatusWA] = useState<"verificando" | "conectado" | "desconectado">("verificando")
   const [qrBase64, setQrBase64] = useState<string | null>(null)
   const [qrErro, setQrErro] = useState<string | null>(null)
   const [carregandoQr, setCarregandoQr] = useState(false)
