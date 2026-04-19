@@ -1,33 +1,32 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 
-const BASE = process.env.EVOLUTION_URL
-const KEY = process.env.EVOLUTION_KEY
-const INSTANCE = process.env.EVOLUTION_INSTANCE
+const BASE = `https://api.maytapi.com/api/${process.env.MAYTAPI_PRODUCT_ID}`
+const PHONE_ID = process.env.MAYTAPI_PHONE_ID
+const HEADERS = { "x-maytapi-key": process.env.MAYTAPI_TOKEN!, "Content-Type": "application/json" }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end()
   try {
-    // Garante que a instância existe
-    await fetch(`${BASE}/instance/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: KEY! },
-      body: JSON.stringify({ instanceName: INSTANCE, integration: "WHATSAPP-BAILEYS" }),
-    })
+    const r = await fetch(`${BASE}/${PHONE_ID}/qrCode`, { headers: HEADERS })
+    const contentType = r.headers.get("content-type") ?? ""
 
-    // Busca o QR code
-    const r = await fetch(`${BASE}/instance/connect/${INSTANCE}`, {
-      headers: { apikey: KEY! },
-    })
-    const d = await r.json() as { base64?: string; code?: string }
+    // Retorna imagem direta
+    if (contentType.includes("image")) {
+      const buffer = await r.arrayBuffer()
+      const base64 = Buffer.from(buffer).toString("base64")
+      return res.status(200).json({ qr: `data:image/png;base64,${base64}` })
+    }
 
-    if (d.base64) {
-      const qr = d.base64.startsWith("data:") ? d.base64 : `data:image/png;base64,${d.base64}`
+    // Retorna JSON com base64
+    const d = await r.json() as { data?: string; qrCode?: string; message?: string }
+    const raw = d.data ?? d.qrCode
+    if (raw) {
+      const qr = raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`
       return res.status(200).json({ qr })
     }
 
-    return res.status(200).json({ qr: null, erro: "QR não disponível — tente novamente em instantes" })
+    return res.status(200).json({ qr: null, erro: d.message ?? "QR não disponível" })
   } catch (err) {
-    console.error("[zapi-qrcode]", err)
     return res.status(200).json({ qr: null, erro: String(err) })
   }
 }
