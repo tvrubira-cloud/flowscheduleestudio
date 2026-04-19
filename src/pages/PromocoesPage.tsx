@@ -32,24 +32,41 @@ export default function PromocoesPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [statusWA, setStatusWA] = useState<"verificando" | "conectado" | "desconectado">("verificando")
-  const [qrTimestamp, setQrTimestamp] = useState(Date.now())
+  const [qrBase64, setQrBase64] = useState<string | null>(null)
+  const [qrErro, setQrErro] = useState<string | null>(null)
+  const [carregandoQr, setCarregandoQr] = useState(false)
+
+  const buscarQr = async () => {
+    setCarregandoQr(true)
+    setQrErro(null)
+    try {
+      const r = await fetch("/api/zapi-qrcode")
+      const d = await r.json() as { qr?: string; erro?: string }
+      if (d.qr) { setQrBase64(d.qr) } else { setQrErro(d.erro ?? "QR não disponível") }
+    } catch {
+      setQrErro("Erro ao carregar QR Code")
+    } finally {
+      setCarregandoQr(false)
+    }
+  }
 
   const verificarStatus = () => {
     setStatusWA("verificando")
     fetch("/api/zapi-status")
       .then((r) => r.json())
-      .then((d: { conectado: boolean }) => setStatusWA(d.conectado ? "conectado" : "desconectado"))
+      .then((d: { conectado: boolean }) => {
+        setStatusWA(d.conectado ? "conectado" : "desconectado")
+      })
       .catch(() => setStatusWA("desconectado"))
   }
 
-  useEffect(() => {
-    verificarStatus()
-  }, [])
+  useEffect(() => { verificarStatus() }, [])
 
-  // Quando desconectado, atualiza o QR a cada 30s automaticamente
+  // Quando desconectado, carrega o QR e atualiza a cada 30s
   useEffect(() => {
     if (statusWA !== "desconectado") return
-    const interval = setInterval(() => setQrTimestamp(Date.now()), 30000)
+    buscarQr()
+    const interval = setInterval(buscarQr, 30000)
     return () => clearInterval(interval)
   }, [statusWA])
 
@@ -163,28 +180,37 @@ export default function PromocoesPage() {
 
             {/* QR Code */}
             <div className="flex flex-col items-center gap-3">
-              <div className="bg-white rounded-2xl p-3 w-48 h-48 flex items-center justify-center">
-                <img
-                  key={qrTimestamp}
-                  src={`/api/zapi-qrcode?t=${qrTimestamp}`}
-                  alt="QR Code WhatsApp"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none"
-                  }}
-                />
+              <div className="bg-white rounded-2xl p-3 w-52 h-52 flex items-center justify-center">
+                {carregandoQr && <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />}
+                {!carregandoQr && qrBase64 && (
+                  <img src={qrBase64} alt="QR Code WhatsApp" className="w-full h-full object-contain" />
+                )}
+                {!carregandoQr && qrErro && (
+                  <p className="text-xs text-red-400 text-center px-2">{qrErro}</p>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">QR Code atualiza automaticamente a cada 30s</p>
             </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full border-white/10 gap-2"
-              onClick={() => { setQrTimestamp(Date.now()); verificarStatus() }}
-            >
-              <Loader2 className="w-3.5 h-3.5" /> Já escaniei — verificar conexão
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-white/10 gap-1.5 text-xs"
+                onClick={buscarQr}
+                disabled={carregandoQr}
+              >
+                {carregandoQr ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
+                Atualizar QR
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => { setQrBase64(null); verificarStatus() }}
+              >
+                <CheckCircle className="w-3 h-3" /> Já escaniei
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
