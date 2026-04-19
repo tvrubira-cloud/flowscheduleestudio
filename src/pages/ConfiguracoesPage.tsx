@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useDisponibilidade } from "@/hooks/useDisponibilidade"
 import { useAppStore } from "@/store/useAppStore"
-import { uploadLogo } from "@/lib/uploadLogo"
+import { comprimirLogo } from "@/lib/uploadLogo"
 import type { Disponibilidade } from "@/types"
 import toast from "react-hot-toast"
 
@@ -117,8 +117,8 @@ export default function ConfiguracoesPage() {
     }
     setUploadandoLogo(true)
     try {
-      const url = await uploadLogo(file)
-      const novoForm = { ...form, logoUrl: url }
+      const base64 = await comprimirLogo(file)
+      const novoForm = { ...form, logoUrl: base64 }
       setForm(novoForm)
       await salvar(novoForm)
     } catch {
