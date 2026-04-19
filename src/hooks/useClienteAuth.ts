@@ -75,7 +75,29 @@ export function useClienteAuth() {
     } catch (err: unknown) {
       const code = (err as { code?: string }).code
       if (code === "auth/email-already-in-use") {
-        toast.error("E-mail já cadastrado. Faça login.")
+        // Perfil pode ter sido deletado pelo salão — tenta relogar e recriar
+        try {
+          const cred = await signInWithEmailAndPassword(clienteAuth, email, senha)
+          if (db) {
+            const snap = await getDoc(doc(db, "perfis_clientes", cred.user.uid))
+            if (!snap.exists()) {
+              const perfilData: PerfilCliente = {
+                nome: nome.trim(),
+                telefone: telefone.replace(/\D/g, ""),
+                email,
+                salonId,
+                createdAt: Timestamp.now(),
+              }
+              await setDoc(doc(db, "perfis_clientes", cred.user.uid), perfilData)
+              setPerfil(perfilData)
+              toast.success("Cadastro realizado com sucesso!")
+              return cred.user.uid
+            }
+          }
+          toast.error("E-mail já cadastrado. Use 'Já tenho conta' para entrar.")
+        } catch {
+          toast.error("E-mail já cadastrado. Use 'Já tenho conta' para entrar.")
+        }
       } else if (code === "auth/weak-password") {
         toast.error("Senha muito fraca. Use ao menos 6 caracteres.")
       } else {

@@ -2,6 +2,10 @@ import { useEffect } from "react"
 import {
   collection,
   addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  doc,
   query,
   where,
   Timestamp,
@@ -60,5 +64,35 @@ export function useClientes() {
     }
   }
 
-  return { clientes, adicionarCliente }
+  const editarCliente = async (id: string, nome: string, telefone: string) => {
+    if (!isFirebaseConfigured || !db) return
+    try {
+      await updateDoc(doc(db, "clientes", id), { nome, telefone })
+      toast.success("Cliente atualizado!")
+    } catch {
+      toast.error("Erro ao atualizar cliente.")
+    }
+  }
+
+  const deletarCliente = async (id: string) => {
+    if (!isFirebaseConfigured || !db) return
+    try {
+      const clienteDoc = clientes.find((c) => c.id === id)
+      await deleteDoc(doc(db, "clientes", id))
+
+      // Remove o perfil de agendamento para forçar novo cadastro
+      if (clienteDoc) {
+        const tel = clienteDoc.telefone.replace(/\D/g, "")
+        const q = query(collection(db, "perfis_clientes"), where("telefone", "==", tel))
+        const snap = await getDocs(q)
+        snap.forEach((d) => deleteDoc(d.ref))
+      }
+
+      toast.success("Cliente removido.")
+    } catch {
+      toast.error("Erro ao remover cliente.")
+    }
+  }
+
+  return { clientes, adicionarCliente, editarCliente, deletarCliente }
 }

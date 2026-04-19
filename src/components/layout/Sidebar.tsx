@@ -1,6 +1,6 @@
 import {
   Calendar, LayoutDashboard, Users, CreditCard,
-  LogOut, BadgeCheck, Zap, ShieldCheck, Settings, BarChart2, Mail,
+  LogOut, BadgeCheck, Zap, ShieldCheck, Settings, BarChart2, Mail, Megaphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
@@ -19,6 +19,7 @@ interface NavItem {
 const BASE_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { id: "clientes", label: "Clientes", Icon: Users },
+  { id: "promocoes", label: "Promoções", Icon: Megaphone },
   { id: "financeiro", label: "Financeiro", Icon: CreditCard },
   { id: "configuracoes", label: "Config", Icon: Settings },
 ]

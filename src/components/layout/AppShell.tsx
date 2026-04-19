@@ -12,6 +12,7 @@ const FinanceiroPage = lazy(() => import("@/pages/FinanceiroPage"))
 const ConfiguracoesPage = lazy(() => import("@/pages/ConfiguracoesPage"))
 const AdminPage = lazy(() => import("@/pages/AdminPage"))
 const RelatoriosPage = lazy(() => import("@/pages/RelatoriosPage"))
+const PromocoesPage = lazy(() => import("@/pages/PromocoesPage"))
 
 function PageLoader() {
   return (
@@ -113,6 +114,7 @@ export function AppShell() {
               {activeTab === "financeiro" && <FinanceiroPage />}
               {activeTab === "configuracoes" && <ConfiguracoesPage />}
               {activeTab === "relatorios" && <RelatoriosPage />}
+              {activeTab === "promocoes" && <PromocoesPage />}
               {activeTab === "admin" && <AdminPage />}
             </Suspense>
           </div>

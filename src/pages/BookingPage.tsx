@@ -36,7 +36,7 @@ function formatarData(data: Date): string {
 
 // ─── Etapas ──────────────────────────────────────────────────────────────────
 
-type Etapa = "data" | "horario" | "dados" | "confirmado"
+type Etapa = "data" | "horario" | "dados" | "confirmar" | "confirmado"
 
 export default function BookingPage() {
   const { userId } = useParams<{ userId: string }>()
@@ -55,10 +55,10 @@ export default function BookingPage() {
   const [carregandoSlots, setCarregandoSlots] = useState(false)
 
   // Dados do cliente
-  const [modoAuth, setModoAuth] = useState<"cadastro" | "login">("cadastro")
+  const [modoAuth, setModoAuth] = useState<"cadastro" | "login">("login")
   const [nome, setNome] = useState("")
   const [telefone, setTelefone] = useState("")
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => localStorage.getItem("booking_email") ?? "")
   const [senha, setSenha] = useState("")
   const [mensagem, setMensagem] = useState("")
   const [processandoAuth, setProcessandoAuth] = useState(false)
@@ -110,7 +110,11 @@ export default function BookingPage() {
 
   const selecionarHorario = (hora: string) => {
     setHorarioSelecionado(hora)
-    setEtapa("dados")
+    if (clienteLogado && perfilCliente) {
+      setEtapa("confirmar" as Etapa)
+    } else {
+      setEtapa("dados")
+    }
   }
 
   const confirmar = async () => {
@@ -131,9 +135,11 @@ export default function BookingPage() {
           if (telFinal.length < 10) { toast.error("Informe um telefone com DDD."); return }
           uid = await registrar(nomeFinal, telFinal, email, senha, userId)
           if (!uid) return
+          localStorage.setItem("booking_email", email)
         } else {
           uid = await entrar(email, senha)
           if (!uid) return
+          localStorage.setItem("booking_email", email)
           nomeFinal = perfilCliente?.nome || nome.trim() || email.split("@")[0]
           telFinal = (perfilCliente?.telefone || telefone).replace(/\D/g, "")
         }
@@ -282,14 +288,14 @@ export default function BookingPage() {
 
         {/* Indicador de etapas */}
         <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
-          {(["data", "horario", "dados"] as Etapa[]).map((e, i) => (
+          {(["data", "horario", clienteLogado && perfilCliente ? "confirmar" : "dados"] as Etapa[]).map((e, i) => (
             <div key={e} className="flex items-center gap-2">
               {i > 0 && <div className="w-6 h-px bg-white/10" />}
               <span className={etapa === e || (
-                (e === "data" && ["horario","dados"].includes(etapa)) ||
-                (e === "horario" && etapa === "dados")
+                (e === "data" && ["horario","dados","confirmar"].includes(etapa)) ||
+                (e === "horario" && ["dados","confirmar"].includes(etapa))
               ) ? "text-primary font-medium" : ""}>
-                {e === "data" ? "1. Data" : e === "horario" ? "2. Horário" : "3. Seus dados"}
+                {e === "data" ? "1. Data" : e === "horario" ? "2. Horário" : "3. Confirmar"}
               </span>
             </div>
           ))}
@@ -379,6 +385,74 @@ export default function BookingPage() {
             </motion.div>
           )}
 
+          {/* Etapa 3 (logado): Confirmar direto */}
+          {etapa === "confirmar" && clienteLogado && perfilCliente && (
+            <motion.div
+              key="confirmar"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <Card className="border-white/5 bg-zinc-900/20">
+                <CardHeader>
+                  <CardTitle className="text-base">Confirmar agendamento</CardTitle>
+                  <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {dataSelecionada && `${dataSelecionada.getDate()}/${dataSelecionada.getMonth() + 1}`}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      {horarioSelecionado}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Perfil do cliente */}
+                  <div className="flex items-center gap-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
+                      {perfilCliente.nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{perfilCliente.nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">{perfilCliente.telefone}</p>
+                    </div>
+                  </div>
+
+                  {/* Mensagem opcional */}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                      Mensagem <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                    </label>
+                    <textarea
+                      placeholder="Ex: Quero corte e barba, tenho cabelo longo..."
+                      value={mensagem}
+                      onChange={(e) => setMensagem(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={confirmar}
+                    disabled={salvando || processandoAuth}
+                    className="w-full h-11 font-bold gap-2"
+                  >
+                    {(salvando || processandoAuth)
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Confirmando...</>
+                      : <><CheckCircle className="w-4 h-4" /> Confirmar Agendamento</>
+                    }
+                  </Button>
+
+                  <Button variant="ghost" size="sm" onClick={() => setEtapa("horario")} className="text-muted-foreground w-full">
+                    ← Voltar
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Etapa 3: Dados do cliente */}
           {etapa === "dados" && (
             <motion.div
@@ -416,19 +490,19 @@ export default function BookingPage() {
                     </div>
                   ) : (
                     <>
-                      {/* Toggle cadastro / login */}
+                      {/* Toggle login / cadastro */}
                       <div className="flex gap-1 bg-white/5 rounded-xl p-1">
-                        <button
-                          onClick={() => setModoAuth("cadastro")}
-                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modoAuth === "cadastro" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                          Primeira vez
-                        </button>
                         <button
                           onClick={() => setModoAuth("login")}
                           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modoAuth === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                         >
                           Já tenho conta
+                        </button>
+                        <button
+                          onClick={() => setModoAuth("cadastro")}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${modoAuth === "cadastro" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          Primeiro acesso
                         </button>
                       </div>
 
