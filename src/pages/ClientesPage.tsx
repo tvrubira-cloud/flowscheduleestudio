@@ -122,16 +122,10 @@ export default function ClientesPage() {
     setTelefone("")
   }
 
-  const abrirWhatsApp = async (cliente: Cliente) => {
-    await enviarMensagemWA(
-      cliente.telefone,
-      "Olá! 😊",
-      statusWA,
-      {
-        toastSucesso: `Conversa com ${cliente.nome} iniciada! Continue no WhatsApp já aberto.`,
-        toastFallback: "Abrindo WhatsApp...",
-      }
-    )
+  const abrirWhatsApp = (cliente: Cliente) => {
+    const numero = cliente.telefone.replace(/\D/g, "")
+    const numComPais = numero.startsWith("55") ? numero : `55${numero}`
+    window.open(`https://wa.me/${numComPais}`, "_blank", "noopener,noreferrer")
   }
 
   return (
