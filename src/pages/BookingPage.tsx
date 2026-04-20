@@ -53,6 +53,8 @@ export default function BookingPage() {
   const [horarioSelecionado, setHorarioSelecionado] = useState<string | null>(null)
   const [slots, setSlots] = useState<string[]>([])
   const [carregandoSlots, setCarregandoSlots] = useState(false)
+  const [datasCheiras, setDatasCheiras] = useState<Set<string>>(new Set())
+  const [dataVerificando, setDataVerificando] = useState<string | null>(null)
 
   // Dados do cliente
   const [modoAuth, setModoAuth] = useState<"cadastro" | "login">("login")
@@ -81,13 +83,14 @@ export default function BookingPage() {
   }, [perfilCliente])
 
   const selecionarData = async (data: Date) => {
-    setDataSelecionada(data)
-    setHorarioSelecionado(null)
-    setEtapa("horario")
-
     if (!disponibilidade || !userId) return
-    setCarregandoSlots(true)
-    const ocupados = await buscarHorariosOcupados(userId, formatarData(data))
+    const dataStr = formatarData(data)
+
+    // Se já sabe que está cheia, não navega
+    if (datasCheiras.has(dataStr)) return
+
+    setDataVerificando(dataStr)
+    const ocupados = await buscarHorariosOcupados(userId, dataStr)
     let livres = gerarSlots(
       disponibilidade.horarioInicio,
       disponibilidade.horarioFim,
@@ -96,7 +99,7 @@ export default function BookingPage() {
     )
     // Para hoje: remove slots que já passaram
     const hoje = new Date()
-    const isHoje = formatarData(data) === formatarData(hoje)
+    const isHoje = dataStr === formatarData(hoje)
     if (isHoje) {
       const agora = hoje.getHours() * 60 + hoje.getMinutes()
       livres = livres.filter((h) => {
@@ -104,8 +107,17 @@ export default function BookingPage() {
         return hh * 60 + mm > agora
       })
     }
+    setDataVerificando(null)
+
+    if (livres.length === 0) {
+      setDatasCheiras((prev) => new Set(prev).add(dataStr))
+      return
+    }
+
+    setDataSelecionada(data)
+    setHorarioSelecionado(null)
     setSlots(livres)
-    setCarregandoSlots(false)
+    setEtapa("horario")
   }
 
   const selecionarHorario = (hora: string) => {
@@ -320,17 +332,35 @@ export default function BookingPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {datas.map((data) => (
-                      <button
-                        key={formatarData(data)}
-                        onClick={() => selecionarData(data)}
-                        className="flex flex-col items-center p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-primary/20 hover:border-primary/50 transition-colors"
-                      >
-                        <span className="text-xs text-muted-foreground">{DIAS_NOME[data.getDay()].slice(0, 3)}</span>
-                        <span className="text-lg font-bold">{data.getDate()}</span>
-                        <span className="text-xs text-muted-foreground">{MESES[data.getMonth()]}</span>
-                      </button>
-                    ))}
+                    {datas.map((data) => {
+                      const dataStr = formatarData(data)
+                      const cheia = datasCheiras.has(dataStr)
+                      const verificando = dataVerificando === dataStr
+                      return (
+                        <button
+                          key={dataStr}
+                          onClick={() => selecionarData(data)}
+                          disabled={verificando}
+                          className={`flex flex-col items-center p-3 rounded-xl border transition-colors relative ${
+                            cheia
+                              ? "border-red-500/30 bg-red-500/5 cursor-not-allowed opacity-60"
+                              : verificando
+                              ? "border-white/10 bg-white/5 opacity-60 cursor-wait"
+                              : "border-white/10 bg-white/5 hover:bg-primary/20 hover:border-primary/50"
+                          }`}
+                        >
+                          <span className="text-xs text-muted-foreground">{DIAS_NOME[data.getDay()].slice(0, 3)}</span>
+                          <span className="text-lg font-bold">{data.getDate()}</span>
+                          <span className="text-xs text-muted-foreground">{MESES[data.getMonth()]}</span>
+                          {cheia && (
+                            <span className="text-[9px] text-red-400 font-semibold mt-0.5 leading-tight">Agenda cheia</span>
+                          )}
+                          {verificando && (
+                            <Loader2 className="w-3 h-3 animate-spin text-muted-foreground mt-0.5" />
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
