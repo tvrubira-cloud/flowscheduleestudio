@@ -125,7 +125,11 @@ export default function ClientesPage() {
   const abrirWhatsApp = (cliente: Cliente) => {
     const numero = cliente.telefone.replace(/\D/g, "")
     const numComPais = numero.startsWith("55") ? numero : `55${numero}`
-    window.open(`https://wa.me/${numComPais}`, "_blank", "noopener,noreferrer")
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const url = isMobile
+      ? `whatsapp://send?phone=${numComPais}`
+      : `https://wa.me/${numComPais}`
+    window.location.href = url
   }
 
   return (
