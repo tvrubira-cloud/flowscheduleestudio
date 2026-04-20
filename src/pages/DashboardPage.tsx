@@ -159,6 +159,12 @@ export default function DashboardPage() {
     if (!user || user.uid === "demo-user") return
     buscarAgendamentos(user.uid).then(setAgendamentos)
     carregarDisponibilidade()
+
+    const intervalo = setInterval(() => {
+      buscarAgendamentos(user.uid).then(setAgendamentos)
+    }, 30_000)
+
+    return () => clearInterval(intervalo)
   }, [user])
 
   const criarAgendamento = async (cliente: Cliente) => {
