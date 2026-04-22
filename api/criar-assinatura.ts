@@ -1,6 +1,4 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb } from "./_lib/firebase-admin"
-import { FieldValue } from "firebase-admin/firestore"
+import type { VercelRequest, VercelResponse } from "@vercel/node"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
@@ -18,15 +16,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const psToken = process.env.PAGSEGURO_TOKEN
   const psEmail = process.env.PAGSEGURO_EMAIL
 
-  console.log("[criar-assinatura] token presente:", !!psToken, "email presente:", !!psEmail)
-
   if (!psToken) {
-    return res.status(500).json({ error: "PAGSEGURO_TOKEN não configurado no Vercel" })
+    return res.status(500).json({ error: "PAGSEGURO_TOKEN não configurado" })
   }
 
   const appUrl = "https://www.flowschedule.online"
-  const notificationUrl = process.env.PAGSEGURO_NOTIFICATION_URL
-    ?? `${appUrl}/api/webhook-pagseguro`
+  const notificationUrl =
+    process.env.PAGSEGURO_NOTIFICATION_URL ?? `${appUrl}/api/webhook-pagseguro`
 
   const params = new URLSearchParams({
     currency: "BRL",
@@ -44,8 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     notificationURL: notificationUrl,
   })
 
-  // Tenta autenticação Bearer (PagBank novo) primeiro,
-  // cai para email+token (PagSeguro legado) se necessário
   const usarBearer = !psEmail
 
   const url = usarBearer
@@ -67,28 +61,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!psRes.ok) {
       console.error("[criar-assinatura] PagBank error:", psRes.status, text)
-      return res.status(502).json({ error: "Erro ao criar assinatura no PagBank", details: text })
+      return res.status(502).json({
+        error: "Erro ao criar assinatura no PagBank",
+        details: text,
+        status: psRes.status,
+      })
     }
 
     const checkoutCode = text.match(/<checkoutCode>(.*?)<\/checkoutCode>/)?.[1]
 
     if (!checkoutCode) {
       console.error("[criar-assinatura] checkoutCode ausente:", text)
-      return res.status(502).json({ error: "Código não retornado pelo PagBank" })
+      return res.status(502).json({ error: "Código não retornado pelo PagBank", raw: text })
     }
-
-    await getAdminDb().collection("assinaturas_pendentes").doc(userId).set({
-      userId,
-      nome: nome?.trim() || email.split("@")[0],
-      email,
-      checkoutCode,
-      criadoEm: FieldValue.serverTimestamp(),
-    })
 
     const checkoutUrl = `https://pagseguro.uol.com.br/v2/pre-approvals/request.html?code=${checkoutCode}`
     return res.status(200).json({ checkoutUrl })
   } catch (err) {
-    console.error("[criar-assinatura]", err)
-    return res.status(500).json({ error: "Erro interno ao criar assinatura" })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[criar-assinatura] catch:", msg)
+    return res.status(500).json({ error: "Erro interno", details: msg })
   }
 }
