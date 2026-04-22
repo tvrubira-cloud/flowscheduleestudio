@@ -96,28 +96,43 @@ async function aplicarBonusIndicacao(novoProUid: string): Promise<void> {
 
 // ─── Handler: mudança de status da assinatura recorrente ──────────────────────
 
-async function handlePreApproval(notificationCode: string): Promise<void> {
-  const psEmail = process.env.PAGSEGURO_EMAIL
-  const psToken = process.env.PAGSEGURO_TOKEN
-  if (!psToken) return
+async function handlePreApproval(
+  notificationCode: string,
+  prefilled?: { status?: string; senderEmail?: string; preApprovalCode?: string }
+): Promise<void> {
+  let status = prefilled?.status ?? ""
+  let senderEmail = prefilled?.senderEmail ?? ""
+  let preApprovalCode = prefilled?.preApprovalCode ?? ""
+
+  // Se os campos não vieram pré-resolvidos, busca no PagBank
+  if (!status) {
+    const psEmail = process.env.PAGSEGURO_EMAIL
+    const psToken = process.env.PAGSEGURO_TOKEN
+    if (!psToken) return
+
+    try {
+      const url = psEmail
+        ? `https://ws.pagseguro.uol.com.br/v2/pre-approvals/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
+        : `https://api.pagseguro.com/pre-approvals/notifications/${notificationCode}`
+      const headers: Record<string, string> = psEmail
+        ? { Accept: "application/vnd.pagseguro.com.br.v3+xml" }
+        : { Accept: "application/json", Authorization: `Bearer ${psToken}` }
+
+      const res = await fetch(url, { headers })
+      if (!res.ok) return
+
+      const text = await res.text()
+      status = getTag(text, "status")
+      preApprovalCode = preApprovalCode || getTag(text, "preApprovalCode")
+      senderEmail = senderEmail || getTag(text, "email")
+    } catch (err) {
+      console.error("[webhook] handlePreApproval fetch error:", err)
+      return
+    }
+  }
 
   try {
-    // Suporta email+token (legado) ou Bearer (PagBank novo)
-    const url = psEmail
-      ? `https://ws.pagseguro.uol.com.br/v2/pre-approvals/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
-      : `https://api.pagseguro.com/pre-approvals/notifications/${notificationCode}`
-    const headers: Record<string, string> = psEmail
-      ? { Accept: "application/vnd.pagseguro.com.br.v3+xml" }
-      : { Accept: "application/json", Authorization: `Bearer ${psToken}` }
-
-    const res = await fetch(url, { headers })
-    if (!res.ok) return
-
-    const text = await res.text()
-    const status = getTag(text, "status")
-    const reference = getTag(text, "reference") // "PRO-{userId}" ou vazio (plano direto)
-    const preApprovalCode = getTag(text, "preApprovalCode")
-    const senderEmail = getTag(text, "email")
+    const reference = "" // pré-resolvido não usa reference
 
     // Tenta pelo reference primeiro; se não tiver, busca pelo e-mail do assinante
     let userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
@@ -232,19 +247,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Repassa para o outro app em paralelo (não bloqueia o processamento)
   repassarParaAgentex(req.body)
 
-  const { notificationCode, notificationType } = req.body as {
+  const {
+    notificationCode,
+    notificationType,
+    status: statusPrefilled,
+    senderEmail: emailPrefilled,
+    preApprovalCode: codePrefilled,
+  } = req.body as {
     notificationCode?: string
     notificationType?: string
+    status?: string
+    senderEmail?: string
+    preApprovalCode?: string
   }
 
-  if (!notificationCode) {
+  if (!notificationCode && !statusPrefilled) {
     return res.status(200).json({ received: true })
   }
 
   try {
     // Mudança de status da assinatura recorrente (ativação, cancelamento)
     if (notificationType === "preApproval") {
-      await handlePreApproval(notificationCode)
+      await handlePreApproval(notificationCode ?? "", {
+        status: statusPrefilled,
+        senderEmail: emailPrefilled,
+        preApprovalCode: codePrefilled,
+      })
       return res.status(200).json({ received: true })
     }
 
