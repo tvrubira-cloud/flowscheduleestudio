@@ -27,11 +27,16 @@ async function verificarPagamento(notificationCode: string): Promise<{
 } | null> {
   const psEmail = process.env.PAGSEGURO_EMAIL
   const psToken = process.env.PAGSEGURO_TOKEN
-  if (!psEmail || !psToken) return null
+  if (!psToken) return null
 
   try {
-    const url = `https://ws.pagseguro.uol.com.br/v3/transactions/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
-    const res = await fetch(url, { headers: { Accept: "application/json" } })
+    const url = psEmail
+      ? `https://ws.pagseguro.uol.com.br/v3/transactions/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
+      : `https://api.pagseguro.com/transactions/notifications/${notificationCode}`
+    const headers: Record<string, string> = psEmail
+      ? { Accept: "application/json" }
+      : { Accept: "application/json", Authorization: `Bearer ${psToken}` }
+    const res = await fetch(url, { headers })
     if (!res.ok) return null
 
     const text = await res.text()
@@ -94,13 +99,18 @@ async function aplicarBonusIndicacao(novoProUid: string): Promise<void> {
 async function handlePreApproval(notificationCode: string): Promise<void> {
   const psEmail = process.env.PAGSEGURO_EMAIL
   const psToken = process.env.PAGSEGURO_TOKEN
-  if (!psEmail || !psToken) return
+  if (!psToken) return
 
   try {
-    const url = `https://ws.pagseguro.uol.com.br/v2/pre-approvals/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
-    const res = await fetch(url, {
-      headers: { Accept: "application/vnd.pagseguro.com.br.v3+xml" },
-    })
+    // Suporta email+token (legado) ou Bearer (PagBank novo)
+    const url = psEmail
+      ? `https://ws.pagseguro.uol.com.br/v2/pre-approvals/notifications/${notificationCode}?email=${psEmail}&token=${psToken}`
+      : `https://api.pagseguro.com/pre-approvals/notifications/${notificationCode}`
+    const headers: Record<string, string> = psEmail
+      ? { Accept: "application/vnd.pagseguro.com.br.v3+xml" }
+      : { Accept: "application/json", Authorization: `Bearer ${psToken}` }
+
+    const res = await fetch(url, { headers })
     if (!res.ok) return
 
     const text = await res.text()
