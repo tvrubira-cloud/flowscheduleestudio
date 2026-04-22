@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb } from "./_lib/firebase-admin"
 import { enviarLembreteAgendamento } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const amanhaStr = amanha.toISOString().split("T")[0] // "YYYY-MM-DD"
 
   try {
-    const snap = await adminDb
+    const snap = await getAdminDb()
       .collection("agendamentos_publicos")
       .where("data", "==", amanhaStr)
       .where("status", "==", "confirmado")
@@ -42,12 +42,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       try {
         // Email do cliente
-        const perfilSnap = await adminDb.collection("perfis_clientes").doc(clienteUid).get()
+        const perfilSnap = await getAdminDb().collection("perfis_clientes").doc(clienteUid).get()
         if (!perfilSnap.exists) continue
         const { email, nome } = perfilSnap.data() as { email: string; nome: string }
 
         // Nome do negócio
-        const dispSnap = await adminDb.collection("disponibilidade").doc(userId).get()
+        const dispSnap = await getAdminDb().collection("disponibilidade").doc(userId).get()
         const nomeNegocio = dispSnap.exists
           ? ((dispSnap.data() as { nomeNegocio?: string }).nomeNegocio ?? "seu serviço")
           : "seu serviço"
@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           nomeNegocio,
         })
 
-        await adminDb.collection("agendamentos_publicos").doc(docSnap.id).update({
+        await getAdminDb().collection("agendamentos_publicos").doc(docSnap.id).update({
           lembreteEnviado: true,
           lembreteEnviadoEm: FieldValue.serverTimestamp(),
         })

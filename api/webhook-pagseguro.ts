@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb } from "./_lib/firebase-admin"
 import { enviarCodigoAtivacao } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
@@ -52,11 +52,11 @@ async function verificarPagamento(notificationCode: string): Promise<{
 
 async function aplicarBonusIndicacao(novoProUid: string): Promise<void> {
   try {
-    const snap = await adminDb.collection("assinaturas").doc(novoProUid).get()
+    const snap = await getAdminDb().collection("assinaturas").doc(novoProUid).get()
     const referidoPor = snap.data()?.referidoPor as string | undefined
     if (!referidoPor) return
 
-    const referrerRef = adminDb.collection("assinaturas").doc(referidoPor)
+    const referrerRef = getAdminDb().collection("assinaturas").doc(referidoPor)
     const referrerSnap = await referrerRef.get()
     const referrerData = referrerSnap.data()
     if (!referrerData) return
@@ -111,7 +111,7 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
     const userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
     if (!userId) return
 
-    const assinaturaRef = adminDb.collection("assinaturas").doc(userId)
+    const assinaturaRef = getAdminDb().collection("assinaturas").doc(userId)
 
     if (status === "ACTIVE") {
       const expiraEm = new Date()
@@ -131,7 +131,7 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
 
       // Mapa de lookup para renovações mensais
       if (preApprovalCode) {
-        await adminDb.collection("ps_preapprovals").doc(preApprovalCode).set({ userId })
+        await getAdminDb().collection("ps_preapprovals").doc(preApprovalCode).set({ userId })
       }
 
       // Bônus de indicação — verifica se foi indicado por usuário Pro
@@ -164,7 +164,7 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
 // ─── Handler: cobrança mensal de renovação ────────────────────────────────────
 
 async function handleRenovacao(preApprovalCode: string): Promise<void> {
-  const lookupSnap = await adminDb.collection("ps_preapprovals").doc(preApprovalCode).get()
+  const lookupSnap = await getAdminDb().collection("ps_preapprovals").doc(preApprovalCode).get()
   if (!lookupSnap.exists) return
 
   const { userId } = lookupSnap.data() as { userId: string }
@@ -172,7 +172,7 @@ async function handleRenovacao(preApprovalCode: string): Promise<void> {
   const expiraEm = new Date()
   expiraEm.setDate(expiraEm.getDate() + 35)
 
-  await adminDb.collection("assinaturas").doc(userId).set(
+  await getAdminDb().collection("assinaturas").doc(userId).set(
     {
       plano: "pro",
       status: "ativo",
@@ -226,7 +226,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Pagamento avulso (código de ativação manual) — fluxo existente
-    const jaProcessado = await adminDb
+    const jaProcessado = await getAdminDb()
       .collection("pagamentos_processados")
       .doc(notificationCode)
       .get()
@@ -238,7 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let codigo = ""
     for (let i = 0; i < 3; i++) {
       const tentativa = gerarCodigo()
-      const existe = await adminDb.collection("codigos_ativacao").doc(tentativa).get()
+      const existe = await getAdminDb().collection("codigos_ativacao").doc(tentativa).get()
       if (!existe.exists) {
         codigo = tentativa
         break
@@ -247,7 +247,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!codigo) throw new Error("Não foi possível gerar um código único.")
 
-    await adminDb.collection("codigos_ativacao").doc(codigo).set({
+    await getAdminDb().collection("codigos_ativacao").doc(codigo).set({
       usado: false,
       email: pagamento.email,
       nome: pagamento.nome,
@@ -256,7 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       criadoEm: FieldValue.serverTimestamp(),
     })
 
-    await adminDb.collection("pagamentos_processados").doc(notificationCode).set({
+    await getAdminDb().collection("pagamentos_processados").doc(notificationCode).set({
       codigo,
       email: pagamento.email,
       processadoEm: FieldValue.serverTimestamp(),

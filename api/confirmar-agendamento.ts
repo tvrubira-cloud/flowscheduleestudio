@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb } from "./_lib/firebase-admin"
 import { enviarConfirmacaoCliente } from "./_lib/email"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Busca nome do negócio
-    const dispSnap = await adminDb.collection("disponibilidade").doc(userId).get()
+    const dispSnap = await getAdminDb().collection("disponibilidade").doc(userId).get()
     const nomeNegocio = (dispSnap.data()?.nomeNegocio as string | undefined) || "Seu negócio"
 
     // Busca email do cliente via perfil
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ ok: true, skipped: "no clienteUid" })
     }
 
-    const perfilSnap = await adminDb.collection("perfis_clientes").doc(clienteUid).get()
+    const perfilSnap = await getAdminDb().collection("perfis_clientes").doc(clienteUid).get()
     if (!perfilSnap.exists) {
       return res.status(200).json({ ok: true, skipped: "client profile not found" })
     }

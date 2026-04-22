@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb } from "./_lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -77,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(502).json({ error: "Código não retornado pelo PagBank" })
     }
 
-    await adminDb.collection("assinaturas_pendentes").doc(userId).set({
+    await getAdminDb().collection("assinaturas_pendentes").doc(userId).set({
       userId,
       nome: nome?.trim() || email.split("@")[0],
       email,

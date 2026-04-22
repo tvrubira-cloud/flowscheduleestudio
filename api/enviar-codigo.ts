@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb } from "./_lib/firebase-admin"
 import { enviarCodigoAtivacao } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
@@ -38,14 +38,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let codigo = ""
     for (let i = 0; i < 5; i++) {
       const tentativa = gerarCodigo()
-      const existe = await adminDb.collection("codigos_ativacao").doc(tentativa).get()
+      const existe = await getAdminDb().collection("codigos_ativacao").doc(tentativa).get()
       if (!existe.exists) { codigo = tentativa; break }
     }
 
     if (!codigo) throw new Error("Não foi possível gerar código único.")
 
     // 2. Salva código no Firestore
-    await adminDb.collection("codigos_ativacao").doc(codigo).set({
+    await getAdminDb().collection("codigos_ativacao").doc(codigo).set({
       usado: false,
       email,
       nome: nome ?? "Cliente",
@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
     // 3. Marca pedido como código enviado
-    await adminDb.collection("pedidos_pendentes").doc(pedidoId).update({
+    await getAdminDb().collection("pedidos_pendentes").doc(pedidoId).update({
       status: "codigo_enviado",
       codigo,
       enviadoEm: FieldValue.serverTimestamp(),

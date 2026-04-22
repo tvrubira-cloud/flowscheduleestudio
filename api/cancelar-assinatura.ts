@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminDb, adminAuth } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let userId: string
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken)
+    const decoded = await getAdminAuth().verifyIdToken(idToken)
     userId = decoded.uid
   } catch {
     return res.status(401).json({ error: "Token inválido" })
@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "PagSeguro não configurado" })
   }
 
-  const assinaturaSnap = await adminDb.collection("assinaturas").doc(userId).get()
+  const assinaturaSnap = await getAdminDb().collection("assinaturas").doc(userId).get()
   if (!assinaturaSnap.exists) {
     return res.status(404).json({ error: "Assinatura não encontrada" })
   }
@@ -57,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(502).json({ error: "Erro ao cancelar no PagSeguro" })
     }
 
-    await adminDb.collection("assinaturas").doc(userId).update({
+    await getAdminDb().collection("assinaturas").doc(userId).update({
       plano: "gratuito",
       status: "inativo",
       renovacaoAutomatica: false,

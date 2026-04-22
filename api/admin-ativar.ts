@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminAuth, adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -9,14 +9,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!token) return res.status(401).json({ error: "Unauthorized" })
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token)
-    const adminSnap = await adminDb.collection("assinaturas").doc(decoded.uid).get()
+    const decoded = await getAdminAuth().verifyIdToken(token)
+    const adminSnap = await getAdminDb().collection("assinaturas").doc(decoded.uid).get()
     if (!adminSnap.data()?.isAdmin) return res.status(403).json({ error: "Forbidden" })
 
     const { targetUid, dias = 30 } = req.body as { targetUid: string; dias?: number }
     if (!targetUid) return res.status(400).json({ error: "targetUid required" })
 
-    const ref = adminDb.collection("assinaturas").doc(targetUid)
+    const ref = getAdminDb().collection("assinaturas").doc(targetUid)
     const snap = await ref.get()
 
     // Estende a partir da data atual de expiração (ou de agora)

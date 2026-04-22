@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminAuth, adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
 import { enviarNotificacaoDono, enviarConfirmacaoCliente } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const tel = clienteTelefone.replace(/\D/g, "")
       const docId = `${userId}_${tel}`
-      await adminDb.collection("clientes").doc(docId).set({
+      await getAdminDb().collection("clientes").doc(docId).set({
         nome: clienteNome,
         telefone: tel,
         userId,
@@ -40,11 +40,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ── Notifica o dono por email ──────────────────────────────────────────
-    const userRecord = await adminAuth.getUser(userId)
+    const userRecord = await getAdminAuth().getUser(userId)
     const emailDono = userRecord.email
     if (!emailDono) return res.status(200).json({ ok: true, skipped: "no owner email" })
 
-    const docSnap = await adminDb.collection("disponibilidade").doc(userId).get()
+    const docSnap = await getAdminDb().collection("disponibilidade").doc(userId).get()
     const nomeNegocio = (docSnap.data()?.nomeNegocio as string | undefined) || "Seu negócio"
 
     await enviarNotificacaoDono({

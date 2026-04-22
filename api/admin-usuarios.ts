@@ -1,5 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { adminAuth, adminDb } from "./_lib/firebase-admin"
+﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end()
@@ -8,11 +8,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!token) return res.status(401).json({ error: "Unauthorized" })
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token)
-    const adminSnap = await adminDb.collection("assinaturas").doc(decoded.uid).get()
+    const decoded = await getAdminAuth().verifyIdToken(token)
+    const adminSnap = await getAdminDb().collection("assinaturas").doc(decoded.uid).get()
     if (!adminSnap.data()?.isAdmin) return res.status(403).json({ error: "Forbidden" })
 
-    const listResult = await adminAuth.listUsers(1000)
+    const listResult = await getAdminAuth().listUsers(1000)
     const uids = listResult.users.map((u) => u.uid)
 
     // Busca assinaturas em lotes de 10
@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (let i = 0; i < uids.length; i += 10) {
       const batch = uids.slice(i, i + 10)
       const snaps = await Promise.all(
-        batch.map((uid) => adminDb.collection("assinaturas").doc(uid).get())
+        batch.map((uid) => getAdminDb().collection("assinaturas").doc(uid).get())
       )
       snaps.forEach((snap, idx) => {
         assinaturas[batch[idx]] = snap.exists ? (snap.data() as Record<string, unknown>) : {}
@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const referrerEmails: Record<string, string> = {}
     for (const uid of referrerUids) {
       try {
-        const u = await adminAuth.getUser(uid)
+        const u = await getAdminAuth().getUser(uid)
         referrerEmails[uid] = u.email ?? uid
       } catch {
         referrerEmails[uid] = uid
