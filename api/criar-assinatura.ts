@@ -18,8 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const psToken = process.env.PAGSEGURO_TOKEN
   const psEmail = process.env.PAGSEGURO_EMAIL
 
+  console.log("[criar-assinatura] token presente:", !!psToken, "email presente:", !!psEmail)
+
   if (!psToken) {
-    return res.status(500).json({ error: "PagSeguro não configurado" })
+    return res.status(500).json({ error: "PAGSEGURO_TOKEN não configurado no Vercel" })
   }
 
   const appUrl = "https://www.flowschedule.online"
