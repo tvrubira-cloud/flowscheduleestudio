@@ -1,5 +1,5 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb } from "./_lib/firebase-admin"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
 import { enviarCodigoAtivacao } from "./_lib/email"
 import { FieldValue } from "firebase-admin/firestore"
 
@@ -123,7 +123,6 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
     let userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
     if (!userId && senderEmail) {
       try {
-        const { getAdminAuth } = await import("./_lib/firebase-admin")
         const userRecord = await getAdminAuth().getUserByEmail(senderEmail)
         userId = userRecord.uid
         console.log(`[webhook] userId encontrado por email ${senderEmail}: ${userId}`)
