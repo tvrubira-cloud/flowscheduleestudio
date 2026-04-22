@@ -25,6 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const appUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "https://www.flowschedule.online"
+  const notificationUrl = process.env.PAGSEGURO_NOTIFICATION_URL
+    ?? `${appUrl}/api/webhook-pagseguro`
 
   const params = new URLSearchParams({
     currency: "BRL",
@@ -39,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     preApprovalExpirationValue: "10",
     preApprovalExpirationUnit: "YEARS",
     redirectURL: `${appUrl}/?ps=ok`,
-    notificationURL: `${appUrl}/api/webhook-pagseguro`,
+    notificationURL: notificationUrl,
   })
 
   try {
