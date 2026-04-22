@@ -15,16 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "userId e email são obrigatórios" })
   }
 
-  const psEmail = process.env.PAGSEGURO_EMAIL
   const psToken = process.env.PAGSEGURO_TOKEN
+  const psEmail = process.env.PAGSEGURO_EMAIL
 
-  if (!psEmail || !psToken) {
+  if (!psToken) {
     return res.status(500).json({ error: "PagSeguro não configurado" })
   }
 
-  const appUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://www.flowschedule.online"
+  const appUrl = "https://www.flowschedule.online"
   const notificationUrl = process.env.PAGSEGURO_NOTIFICATION_URL
     ?? `${appUrl}/api/webhook-pagseguro`
 
@@ -44,31 +42,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     notificationURL: notificationUrl,
   })
 
-  try {
-    const psRes = await fetch(
-      `https://ws.pagseguro.uol.com.br/v2/pre-approvals/request?email=${psEmail}&token=${psToken}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          Accept: "application/vnd.pagseguro.com.br.v3+xml;charset=ISO-8859-1",
-        },
-        body: params.toString(),
-      }
-    )
+  // Tenta autenticação Bearer (PagBank novo) primeiro,
+  // cai para email+token (PagSeguro legado) se necessário
+  const usarBearer = !psEmail
 
+  const url = usarBearer
+    ? `https://api.pagseguro.com/pre-approvals/request`
+    : `https://ws.pagseguro.uol.com.br/v2/pre-approvals/request?email=${psEmail}&token=${psToken}`
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    Accept: "application/vnd.pagseguro.com.br.v3+xml;charset=ISO-8859-1",
+  }
+
+  if (usarBearer) {
+    headers["Authorization"] = `Bearer ${psToken}`
+  }
+
+  try {
+    const psRes = await fetch(url, { method: "POST", headers, body: params.toString() })
     const text = await psRes.text()
 
     if (!psRes.ok) {
-      console.error("[criar-assinatura] PagSeguro error:", text)
-      return res.status(502).json({ error: "Erro ao criar assinatura no PagSeguro", details: text })
+      console.error("[criar-assinatura] PagBank error:", psRes.status, text)
+      return res.status(502).json({ error: "Erro ao criar assinatura no PagBank", details: text })
     }
 
     const checkoutCode = text.match(/<checkoutCode>(.*?)<\/checkoutCode>/)?.[1]
 
     if (!checkoutCode) {
       console.error("[criar-assinatura] checkoutCode ausente:", text)
-      return res.status(502).json({ error: "Código não retornado pelo PagSeguro" })
+      return res.status(502).json({ error: "Código não retornado pelo PagBank" })
     }
 
     await adminDb.collection("assinaturas_pendentes").doc(userId).set({
