@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   doc,
-  getDoc,
+  onSnapshot,
   setDoc,
   updateDoc,
   serverTimestamp,
@@ -54,39 +54,45 @@ export function useAssinatura() {
   // Acesso completo = admin OU Pro pago OU dentro do trial
   const hasFullAccess = isPro || isTrialing
 
-  // ── Carregar assinatura ────────────────────────────────────────────────────
+  // ── Ouvir assinatura em tempo real ────────────────────────────────────────
+  const planoAnterior = useRef<string | null>(null)
+
   useEffect(() => {
     if (!isFirebaseConfigured || !db || !user) {
       setLoadingAssinatura(false)
       return
     }
 
-    const carregar = async () => {
-      try {
-        const ref = doc(db!, "assinaturas", user.uid)
-        const snap = await getDoc(ref)
-        if (snap.exists()) {
-          const data = snap.data()
-          setAssinatura({
-            plano: data.plano ?? "gratuito",
-            status: data.status ?? "ativo",
-            ativadoEm: data.ativadoEm?.toDate?.() ?? undefined,
-            expiraEm: data.expiraEm?.toDate?.() ?? undefined,
-            trialExpiraEm: data.trialExpiraEm?.toDate?.() ?? undefined,
-            renovacaoAutomatica: data.renovacaoAutomatica ?? false,
-            psPreApprovalCode: data.psPreApprovalCode ?? undefined,
-            codigo: data.codigo,
-            isAdmin: data.isAdmin ?? false,
-          })
-        }
-      } catch (err) {
-        console.error("[useAssinatura] carregar:", err)
-      } finally {
-        setLoadingAssinatura(false)
-      }
-    }
+    const ref = doc(db!, "assinaturas", user.uid)
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data()
+        const novoPlano = data.plano ?? "gratuito"
 
-    carregar()
+        if (planoAnterior.current === "gratuito" && novoPlano === "pro") {
+          toast.success("🎉 Sua conta foi ativada como Pro!")
+        }
+        planoAnterior.current = novoPlano
+
+        setAssinatura({
+          plano: novoPlano,
+          status: data.status ?? "ativo",
+          ativadoEm: data.ativadoEm?.toDate?.() ?? undefined,
+          expiraEm: data.expiraEm?.toDate?.() ?? undefined,
+          trialExpiraEm: data.trialExpiraEm?.toDate?.() ?? undefined,
+          renovacaoAutomatica: data.renovacaoAutomatica ?? false,
+          psPreApprovalCode: data.psPreApprovalCode ?? undefined,
+          codigo: data.codigo,
+          isAdmin: data.isAdmin ?? false,
+        })
+      }
+      setLoadingAssinatura(false)
+    }, (err) => {
+      console.error("[useAssinatura] onSnapshot:", err)
+      setLoadingAssinatura(false)
+    })
+
+    return () => unsubscribe()
   }, [user])
 
   // ── Criar assinatura recorrente via PagSeguro ─────────────────────────────
