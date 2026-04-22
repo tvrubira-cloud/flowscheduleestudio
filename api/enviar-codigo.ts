@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb } from "./_lib/firebase-admin"
-import { enviarCodigoAtivacao } from "./_lib/email"
+import { getAdminDb } from "./_lib/firebase-admin.js"
+import { enviarCodigoAtivacao } from "./_lib/email.js"
 import { FieldValue } from "firebase-admin/firestore"
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? ""

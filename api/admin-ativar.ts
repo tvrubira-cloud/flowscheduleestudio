@@ -1,5 +1,5 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin"
+import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
 import { FieldValue } from "firebase-admin/firestore"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

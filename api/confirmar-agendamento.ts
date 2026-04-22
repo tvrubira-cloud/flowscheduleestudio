@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb } from "./_lib/firebase-admin"
-import { enviarConfirmacaoCliente } from "./_lib/email"
+import { getAdminDb } from "./_lib/firebase-admin.js"
+import { enviarConfirmacaoCliente } from "./_lib/email.js"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()

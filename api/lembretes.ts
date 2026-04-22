@@ -1,6 +1,6 @@
 ﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb } from "./_lib/firebase-admin"
-import { enviarLembreteAgendamento } from "./_lib/email"
+import { getAdminDb } from "./_lib/firebase-admin.js"
+import { enviarLembreteAgendamento } from "./_lib/email.js"
 import { FieldValue } from "firebase-admin/firestore"
 
 // Roda todo dia às 12:00 UTC (09:00 horário de Brasília)
