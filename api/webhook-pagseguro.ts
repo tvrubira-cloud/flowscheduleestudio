@@ -200,10 +200,28 @@ async function handleRenovacao(preApprovalCode: string): Promise<void> {
 
 // ─── Webhook Handler ──────────────────────────────────────────────────────────
 
+async function repassarParaAgentex(body: Record<string, unknown>): Promise<void> {
+  const forwardUrl = process.env.PAGSEGURO_FORWARD_URL
+  if (!forwardUrl) return
+  try {
+    await fetch(forwardUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(body as Record<string, string>).toString(),
+    })
+    console.log("[webhook] Notificação repassada para:", forwardUrl)
+  } catch (err) {
+    console.warn("[webhook] Falha ao repassar:", err)
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
   }
+
+  // Repassa para o outro app em paralelo (não bloqueia o processamento)
+  repassarParaAgentex(req.body)
 
   const { notificationCode, notificationType } = req.body as {
     notificationCode?: string
