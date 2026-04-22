@@ -3,6 +3,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node"
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
 
+  // Se existe um link de plano configurado, retorna ele direto (sem chamar PagBank)
+  const planLink = process.env.PAGSEGURO_PLAN_LINK
+  if (planLink) {
+    return res.status(200).json({ checkoutUrl: planLink })
+  }
+
   const { userId, nome, email } = req.body as {
     userId?: string
     nome?: string
@@ -41,7 +47,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   })
 
   const usarBearer = !psEmail
-
   const url = usarBearer
     ? `https://api.pagseguro.com/pre-approvals/request`
     : `https://ws.pagseguro.uol.com.br/v2/pre-approvals/request?email=${psEmail}&token=${psToken}`
@@ -50,17 +55,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     Accept: "application/vnd.pagseguro.com.br.v3+xml;charset=ISO-8859-1",
   }
-
-  if (usarBearer) {
-    headers["Authorization"] = `Bearer ${psToken}`
-  }
+  if (usarBearer) headers["Authorization"] = `Bearer ${psToken}`
 
   try {
     const psRes = await fetch(url, { method: "POST", headers, body: params.toString() })
     const text = await psRes.text()
 
     if (!psRes.ok) {
-      console.error("[criar-assinatura] PagBank error:", psRes.status, text)
       return res.status(502).json({
         error: "Erro ao criar assinatura no PagBank",
         details: text,
@@ -69,9 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const checkoutCode = text.match(/<checkoutCode>(.*?)<\/checkoutCode>/)?.[1]
-
     if (!checkoutCode) {
-      console.error("[criar-assinatura] checkoutCode ausente:", text)
       return res.status(502).json({ error: "Código não retornado pelo PagBank", raw: text })
     }
 
@@ -79,7 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ checkoutUrl })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error("[criar-assinatura] catch:", msg)
     return res.status(500).json({ error: "Erro interno", details: msg })
   }
 }

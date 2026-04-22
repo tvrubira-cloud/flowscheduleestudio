@@ -105,10 +105,22 @@ async function handlePreApproval(notificationCode: string): Promise<void> {
 
     const text = await res.text()
     const status = getTag(text, "status")
-    const reference = getTag(text, "reference") // "PRO-{userId}"
+    const reference = getTag(text, "reference") // "PRO-{userId}" ou vazio (plano direto)
     const preApprovalCode = getTag(text, "preApprovalCode")
+    const senderEmail = getTag(text, "email")
 
-    const userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
+    // Tenta pelo reference primeiro; se não tiver, busca pelo e-mail do assinante
+    let userId = reference.startsWith("PRO-") ? reference.slice(4) : ""
+    if (!userId && senderEmail) {
+      try {
+        const { getAdminAuth } = await import("./_lib/firebase-admin")
+        const userRecord = await getAdminAuth().getUserByEmail(senderEmail)
+        userId = userRecord.uid
+        console.log(`[webhook] userId encontrado por email ${senderEmail}: ${userId}`)
+      } catch {
+        console.warn("[webhook] usuário não encontrado por email:", senderEmail)
+      }
+    }
     if (!userId) return
 
     const assinaturaRef = getAdminDb().collection("assinaturas").doc(userId)
