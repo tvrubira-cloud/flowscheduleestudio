@@ -3,7 +3,10 @@ import Stripe from "stripe"
 import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
 import { FieldValue } from "firebase-admin/firestore"
 
-async function ativarPro(userId: string, preApprovalCode?: string): Promise<void> {
+// Necessário para que o Stripe possa verificar a assinatura com o body bruto
+export const config = { api: { bodyParser: false } }
+
+async function ativarPro(userId: string, subscriptionId?: string): Promise<void> {
   const expiraEm = new Date()
   expiraEm.setDate(expiraEm.getDate() + 35)
 
@@ -14,14 +17,10 @@ async function ativarPro(userId: string, preApprovalCode?: string): Promise<void
       ativadoEm: FieldValue.serverTimestamp(),
       expiraEm,
       renovacaoAutomatica: true,
-      ...(preApprovalCode ? { psPreApprovalCode: preApprovalCode } : {}),
+      ...(subscriptionId ? { psPreApprovalCode: subscriptionId } : {}),
     },
     { merge: true }
   )
-
-  if (preApprovalCode) {
-    await getAdminDb().collection("ps_preapprovals").doc(preApprovalCode).set({ userId })
-  }
 
   console.log(`[webhook] Pro ativado: ${userId}, expira ${expiraEm.toISOString()}`)
 }
@@ -49,19 +48,19 @@ async function buscarUserIdPorEmail(email: string): Promise<string | null> {
   }
 }
 
+async function lerBodyBruto(req: VercelRequest): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on("data", (chunk: Buffer) => chunks.push(chunk))
+    req.on("end", () => resolve(Buffer.concat(chunks)))
+    req.on("error", reject)
+  })
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
 
-  // Validação de segredo para requisições do agentex (não Stripe)
-  const webhookSharedSecret = process.env.WEBHOOK_SECRET
-  const isStripe = !!req.headers["stripe-signature"]
-  if (webhookSharedSecret && !isStripe) {
-    const headerSecret = req.headers["x-webhook-secret"] ?? ""
-    if (headerSecret !== webhookSharedSecret) {
-      console.warn("[webhook] segredo inválido — requisição rejeitada")
-      return res.status(401).json({ error: "Não autorizado" })
-    }
-  }
+  const rawBody = await lerBodyBruto(req)
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -72,10 +71,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let event: Stripe.Event
 
     try {
-      const rawBody = req.body instanceof Buffer
-        ? req.body
-        : Buffer.from(JSON.stringify(req.body))
-
       event = webhookSecret
         ? stripe.webhooks.constructEvent(rawBody, req.headers["stripe-signature"] as string, webhookSecret)
         : JSON.parse(rawBody.toString()) as Stripe.Event
@@ -96,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const sub = event.data.object as Stripe.Subscription
         const customerId = sub.customer as string
         const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
-        const userId = (customer.metadata?.userId)
+        const userId = customer.metadata?.userId
           ?? await buscarUserIdPorEmail(customer.email ?? "")
         if (userId) await cancelarPro(userId)
       }
@@ -105,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
         const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
-        const userId = (customer.metadata?.userId)
+        const userId = customer.metadata?.userId
           ?? await buscarUserIdPorEmail(customer.email ?? "")
         if (userId) await ativarPro(userId, invoice.subscription as string)
       }
@@ -116,8 +111,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ received: true })
   }
 
-  // ── Ativação manual via agentex (campos pré-resolvidos) ───────────────────
-  const { notificationType, status, senderEmail, preApprovalCode } = req.body as {
+  // ── Ativação manual via agentex ───────────────────────────────────────────
+  const webhookSharedSecret = process.env.WEBHOOK_SECRET
+  if (webhookSharedSecret) {
+    const headerSecret = req.headers["x-webhook-secret"] ?? ""
+    if (headerSecret !== webhookSharedSecret) {
+      console.warn("[webhook] segredo inválido — requisição rejeitada")
+      return res.status(401).json({ error: "Não autorizado" })
+    }
+  }
+
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(rawBody.toString())
+  } catch {
+    return res.status(400).json({ error: "Body inválido" })
+  }
+
+  const { notificationType, status, senderEmail, preApprovalCode } = body as {
     notificationType?: string
     status?: string
     senderEmail?: string
