@@ -14,7 +14,7 @@ import { z } from "zod"
 
 const nomeSchema = z.string().min(2, "Nome deve ter ao menos 2 caracteres")
 
-// ─── Modal: captura nome antes de ir ao PagSeguro ─────────────────────────────
+// ─── Modal: captura nome antes de ir ao Stripe ───────────────────────────────
 
 function ModalAssinar({ onClose }: { onClose: () => void }) {
   const { criarAssinatura } = useAssinatura()
@@ -55,7 +55,7 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="text-base font-bold">Antes de assinar</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Seu nome será enviado ao PagSeguro para identificação
+              Seus dados serão usados para identificação no Stripe
             </p>
           </div>
           <Button size="icon" variant="ghost" onClick={onClose} aria-label="Fechar">
@@ -82,7 +82,7 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
           </div>
 
           <p className="text-xs text-muted-foreground bg-white/5 rounded-lg p-3">
-            Você será redirecionado ao PagSeguro para autorizar a cobrança de{" "}
+            Você será redirecionado ao Stripe para autorizar a cobrança de{" "}
             <strong className="text-white">R$ 49,90/mês</strong>. O plano é renovado automaticamente e pode ser cancelado a qualquer momento.
           </p>
 
@@ -93,7 +93,7 @@ function ModalAssinar({ onClose }: { onClose: () => void }) {
           >
             {loading
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Preparando...</>
-              : <><ExternalLink className="w-4 h-4" aria-hidden="true" /> Ir para o PagSeguro</>
+              : <><ExternalLink className="w-4 h-4" aria-hidden="true" /> Ir para o Stripe</>
             }
           </Button>
         </div>
@@ -453,7 +453,7 @@ export default function FinanceiroPage() {
               </Button>
 
               <p className="text-xs text-center text-white/50">
-                Renovação automática mensal · Cancele quando quiser · PagSeguro
+                Renovação automática mensal · Cancele quando quiser · Stripe
               </p>
             </CardContent>
           </Card>

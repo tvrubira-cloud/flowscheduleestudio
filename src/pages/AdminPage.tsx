@@ -286,7 +286,7 @@ export default function AdminPage() {
               <Inbox className="w-4 h-4 text-primary" />Aguardando pagamento
             </CardTitle>
             <CardDescription>
-              Clique em "Enviar Código" após confirmar o pagamento no PagSeguro.
+              Clique em "Enviar Código" após confirmar o pagamento no Stripe.
             </CardDescription>
           </CardHeader>
           <CardContent>
