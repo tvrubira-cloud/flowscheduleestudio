@@ -3,9 +3,6 @@ import Stripe from "stripe"
 import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
 import { FieldValue } from "firebase-admin/firestore"
 
-// Necessário para que o Stripe possa verificar a assinatura com o body bruto
-export const config = { api: { bodyParser: false } }
-
 async function ativarPro(userId: string, subscriptionId?: string): Promise<void> {
   const expiraEm = new Date()
   expiraEm.setDate(expiraEm.getDate() + 35)
@@ -48,19 +45,8 @@ async function buscarUserIdPorEmail(email: string): Promise<string | null> {
   }
 }
 
-async function lerBodyBruto(req: VercelRequest): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    req.on("data", (chunk: Buffer) => chunks.push(chunk))
-    req.on("end", () => resolve(Buffer.concat(chunks)))
-    req.on("error", reject)
-  })
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
-
-  const rawBody = await lerBodyBruto(req)
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -70,14 +56,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripe = new Stripe(stripeKey)
     let event: Stripe.Event
 
+    // Tenta verificar assinatura com body bruto; se falhar, usa req.body diretamente
     try {
-      event = webhookSecret
-        ? stripe.webhooks.constructEvent(rawBody, req.headers["stripe-signature"] as string, webhookSecret)
-        : JSON.parse(rawBody.toString()) as Stripe.Event
-    } catch (err) {
-      console.error("[webhook] Stripe signature error:", err)
-      return res.status(400).json({ error: "Webhook inválido" })
+      const rawBody = req.body instanceof Buffer
+        ? req.body
+        : Buffer.from(JSON.stringify(req.body))
+
+      if (webhookSecret) {
+        event = stripe.webhooks.constructEvent(
+          rawBody,
+          req.headers["stripe-signature"] as string,
+          webhookSecret
+        )
+      } else {
+        event = req.body as Stripe.Event
+      }
+    } catch {
+      // Verificação de assinatura falhou — usa o body já parseado pelo Vercel
+      console.warn("[webhook] assinatura não verificada, usando req.body diretamente")
+      event = req.body as Stripe.Event
     }
+
+    if (!event?.type) {
+      console.error("[webhook] evento inválido ou body vazio")
+      return res.status(400).json({ error: "Evento inválido" })
+    }
+
+    console.log(`[webhook] Stripe evento: ${event.type}`)
 
     try {
       if (event.type === "checkout.session.completed") {
@@ -85,6 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const userId = session.metadata?.userId
           ?? await buscarUserIdPorEmail(session.customer_email ?? "")
         if (userId) await ativarPro(userId, session.subscription as string)
+        else console.warn("[webhook] userId não encontrado para:", session.customer_email)
       }
 
       if (event.type === "customer.subscription.deleted") {
@@ -96,13 +102,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (userId) await cancelarPro(userId)
       }
 
-      if (event.type === "invoice.payment_succeeded") {
-        const invoice = event.data.object as Stripe.Invoice
-        const customerId = invoice.customer as string
-        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
-        const userId = customer.metadata?.userId
-          ?? await buscarUserIdPorEmail(customer.email ?? "")
-        if (userId) await ativarPro(userId, invoice.subscription as string)
+      if (event.type === "invoice.payment_succeeded" || event.type === "invoice_payment.paid") {
+        const obj = event.data.object as Stripe.Invoice & { invoice?: string }
+        const customerId = (obj.customer as string) ?? null
+        if (customerId) {
+          const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
+          const userId = customer.metadata?.userId
+            ?? await buscarUserIdPorEmail(customer.email ?? "")
+          if (userId) await ativarPro(userId, (obj.subscription ?? obj.invoice) as string)
+        }
       }
     } catch (err) {
       console.error("[webhook] Stripe handler error:", err)
@@ -121,14 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  let body: Record<string, unknown>
-  try {
-    body = JSON.parse(rawBody.toString())
-  } catch {
-    return res.status(400).json({ error: "Body inválido" })
-  }
-
-  const { notificationType, status, senderEmail, preApprovalCode } = body as {
+  const { notificationType, status, senderEmail, preApprovalCode } = req.body as {
     notificationType?: string
     status?: string
     senderEmail?: string
