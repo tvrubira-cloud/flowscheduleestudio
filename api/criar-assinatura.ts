@@ -15,9 +15,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
-  const priceId = process.env.STRIPE_PRICE_ID
 
-  if (!stripeKey || !priceId) {
+  if (!stripeKey) {
     return res.status(500).json({ error: "Stripe não configurado" })
   }
 
@@ -26,9 +25,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        {
+          price_data: {
+            currency: "brl",
+            product_data: { name: "FlowSchedule AI - Plano Pro Mensal" },
+            unit_amount: 4990,
+            recurring: { interval: "month" },
+          },
+          quantity: 1,
+        },
+      ],
       customer_email: email,
-      metadata: { userId, nome: nome ?? "" },
+      metadata: { userId, nome: nome ?? "", email },
       success_url: "https://www.flowschedule.online/?stripe=ok",
       cancel_url: "https://www.flowschedule.online/",
     })
