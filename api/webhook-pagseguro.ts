@@ -52,6 +52,17 @@ async function buscarUserIdPorEmail(email: string): Promise<string | null> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
 
+  // Validação de segredo para requisições do agentex (não Stripe)
+  const webhookSharedSecret = process.env.WEBHOOK_SECRET
+  const isStripe = !!req.headers["stripe-signature"]
+  if (webhookSharedSecret && !isStripe) {
+    const headerSecret = req.headers["x-webhook-secret"] ?? ""
+    if (headerSecret !== webhookSharedSecret) {
+      console.warn("[webhook] segredo inválido — requisição rejeitada")
+      return res.status(401).json({ error: "Não autorizado" })
+    }
+  }
+
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
