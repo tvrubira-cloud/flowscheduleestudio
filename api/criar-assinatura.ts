@@ -1,13 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
+import Stripe from "stripe"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
-
-  // Se existe um link de plano configurado, retorna ele direto (sem chamar PagBank)
-  const planLink = process.env.PAGSEGURO_PLAN_LINK
-  if (planLink) {
-    return res.status(200).json({ checkoutUrl: planLink })
-  }
 
   const { userId, nome, email } = req.body as {
     userId?: string
@@ -19,65 +14,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "userId e email são obrigatórios" })
   }
 
-  const psToken = process.env.PAGSEGURO_TOKEN
-  const psEmail = process.env.PAGSEGURO_EMAIL
+  const stripeKey = process.env.STRIPE_SECRET_KEY
+  const priceId = process.env.STRIPE_PRICE_ID
 
-  if (!psToken) {
-    return res.status(500).json({ error: "PAGSEGURO_TOKEN não configurado" })
+  if (!stripeKey || !priceId) {
+    return res.status(500).json({ error: "Stripe não configurado" })
   }
-
-  const appUrl = "https://www.flowschedule.online"
-  const notificationUrl =
-    process.env.PAGSEGURO_NOTIFICATION_URL ?? `${appUrl}/api/webhook-pagseguro`
-
-  const params = new URLSearchParams({
-    currency: "BRL",
-    reference: `PRO-${userId}`,
-    senderName: nome?.trim() || email.split("@")[0],
-    senderEmail: email,
-    preApprovalCharge: "auto",
-    preApprovalName: "FlowSchedule AI Pro",
-    preApprovalAmountPerPayment: "49.90",
-    preApprovalPeriod: "MONTHLY",
-    preApprovalMaxTotalAmount: "9999.00",
-    preApprovalExpirationValue: "10",
-    preApprovalExpirationUnit: "YEARS",
-    redirectURL: `${appUrl}/?ps=ok`,
-    notificationURL: notificationUrl,
-  })
-
-  const usarBearer = !psEmail
-  const url = usarBearer
-    ? `https://api.pagseguro.com/pre-approvals/request`
-    : `https://ws.pagseguro.uol.com.br/v2/pre-approvals/request?email=${psEmail}&token=${psToken}`
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-    Accept: "application/vnd.pagseguro.com.br.v3+xml;charset=ISO-8859-1",
-  }
-  if (usarBearer) headers["Authorization"] = `Bearer ${psToken}`
 
   try {
-    const psRes = await fetch(url, { method: "POST", headers, body: params.toString() })
-    const text = await psRes.text()
-
-    if (!psRes.ok) {
-      return res.status(502).json({
-        error: "Erro ao criar assinatura no PagBank",
-        details: text,
-        status: psRes.status,
-      })
-    }
-
-    const checkoutCode = text.match(/<checkoutCode>(.*?)<\/checkoutCode>/)?.[1]
-    if (!checkoutCode) {
-      return res.status(502).json({ error: "Código não retornado pelo PagBank", raw: text })
-    }
-
-    const checkoutUrl = `https://pagseguro.uol.com.br/v2/pre-approvals/request.html?code=${checkoutCode}`
-    return res.status(200).json({ checkoutUrl })
+    const stripe = new Stripe(stripeKey)
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer_email: email,
+      metadata: { userId, nome: nome ?? "" },
+      success_url: "https://www.flowschedule.online/?stripe=ok",
+      cancel_url: "https://www.flowschedule.online/",
+    })
+    return res.status(200).json({ checkoutUrl: session.url })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return res.status(500).json({ error: "Erro interno", details: msg })
+    console.error("[criar-assinatura] Stripe error:", msg)
+    return res.status(500).json({ error: "Erro ao criar sessão Stripe", details: msg })
   }
 }
