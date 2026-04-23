@@ -15,9 +15,6 @@
   "functions": {
     "api/**/*.ts": {
       "includeFiles": "api/_lib/**"
-    },
-    "api/webhook-pagseguro.ts": {
-      "includeFiles": "api/_lib/**"
     }
   }
 }
