@@ -36,6 +36,9 @@ async function getAccessToken(): Promise<string> {
   const rawKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n")!
   const now = Math.floor(Date.now() / 1000)
 
+  console.log("[firebase-admin] iss:", email)
+  console.log("[firebase-admin] key starts:", rawKey?.substring(0, 40))
+
   const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
   const payload = b64url(Buffer.from(JSON.stringify({
     iss: email,
