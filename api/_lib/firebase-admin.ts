@@ -31,59 +31,15 @@ function b64url(buf: Buffer): string {
 async function getAccessToken(): Promise<string> {
   if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken
 
-  const email = process.env.FIREBASE_CLIENT_EMAIL!
-  const rawKey = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n").replace(/^["']|["']$/g, "")
-  const now = Math.floor(Date.now() / 1000)
-
-  console.log("[firebase-admin] iss:", email)
-  console.log("[firebase-admin] key starts:", rawKey?.substring(0, 40))
-
-  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
-  const payload = b64url(Buffer.from(JSON.stringify({
-    iss: email,
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-    scope: "https://www.googleapis.com/auth/cloud-platform",
-  })))
-
-  const unsigned = `${header}.${payload}`
-
-  // Web Crypto API (Node.js 18 global) — evita erro DECODER::unsupported do OpenSSL 3
-  const pemBody = rawKey
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s+/g, "")
-
-  const cryptoKey = await globalThis.crypto.subtle.importKey(
-    "pkcs8",
-    Buffer.from(pemBody, "base64"),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-
-  const sigBuffer = await globalThis.crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    Buffer.from(unsigned)
-  )
-
-  const assertion = `${unsigned}.${b64url(Buffer.from(sigBuffer))}`
-
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${encodeURIComponent(assertion)}`,
-  })
-
-  const json = await tokenRes.json() as { access_token?: string; expires_in?: number; error?: string }
-  console.log("[firebase-admin] token response:", JSON.stringify({ ok: tokenRes.ok, status: tokenRes.status, hasToken: !!json.access_token, error: json.error }))
-
-  if (!json.access_token) throw new Error(`Token error: ${JSON.stringify(json)}`)
-
-  _cachedToken = json.access_token
-  _tokenExpiry = Date.now() + ((json.expires_in ?? 3600) - 60) * 1000
+  try {
+    const { access_token, expires_in } = await initAdmin().options.credential!.getAccessToken()
+    console.log("[firebase-admin] SDK credential token ok")
+    _cachedToken = access_token
+    _tokenExpiry = Date.now() + (expires_in - 60) * 1000
+  } catch (err) {
+    console.error("[firebase-admin] SDK credential error:", String(err))
+    throw err
+  }
   return _cachedToken
 }
 

@@ -32,8 +32,8 @@ async function buscarUserIdPorEmail(email: string): Promise<string | null> {
   try {
     const userRecord = await getAdminAuth().getUserByEmail(email)
     return userRecord.uid
-  } catch {
-    console.warn("[webhook] usuário não encontrado por email:", email)
+  } catch (err) {
+    console.warn("[webhook] usuário não encontrado por email:", email, String(err))
     return null
   }
 }
