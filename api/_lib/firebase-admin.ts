@@ -1,4 +1,3 @@
-import { createSign, createPrivateKey } from "crypto"
 import { initializeApp, getApps, getApp, cert } from "firebase-admin/app"
 import { getAuth } from "firebase-admin/auth"
 
@@ -49,12 +48,28 @@ async function getAccessToken(): Promise<string> {
   })))
 
   const unsigned = `${header}.${payload}`
-  const key = createPrivateKey({ key: rawKey, format: "pem" })
-  const signer = createSign("RSA-SHA256")
-  signer.update(unsigned)
-  const sig = b64url(signer.sign(key))
 
-  const assertion = `${unsigned}.${sig}`
+  // Web Crypto API (Node.js 18 global) — evita erro DECODER::unsupported do OpenSSL 3
+  const pemBody = rawKey
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s+/g, "")
+
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "pkcs8",
+    Buffer.from(pemBody, "base64"),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  )
+
+  const sigBuffer = await globalThis.crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    Buffer.from(unsigned)
+  )
+
+  const assertion = `${unsigned}.${b64url(Buffer.from(sigBuffer))}`
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
