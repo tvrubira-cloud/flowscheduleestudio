@@ -38,9 +38,10 @@ async function getAccessToken(): Promise<string> {
 
   const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
   const payload = b64url(Buffer.from(JSON.stringify({
-    iss: email, sub: email,
+    iss: email,
     aud: "https://oauth2.googleapis.com/token",
-    iat: now, exp: now + 3600,
+    iat: now,
+    exp: now + 3600,
     scope: "https://www.googleapis.com/auth/cloud-platform",
   })))
 
