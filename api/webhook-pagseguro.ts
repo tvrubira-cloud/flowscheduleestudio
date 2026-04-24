@@ -1,37 +1,30 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import Stripe from "stripe"
-import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
-import { FieldValue } from "firebase-admin/firestore"
+import { getAdminAuth, firestoreSet } from "./_lib/firebase-admin.js"
 
 async function ativarPro(userId: string, subscriptionId?: string): Promise<void> {
   const expiraEm = new Date()
   expiraEm.setDate(expiraEm.getDate() + 35)
 
-  await getAdminDb().collection("assinaturas").doc(userId).set(
-    {
-      plano: "pro",
-      status: "ativo",
-      ativadoEm: FieldValue.serverTimestamp(),
-      expiraEm,
-      renovacaoAutomatica: true,
-      ...(subscriptionId ? { psPreApprovalCode: subscriptionId } : {}),
-    },
-    { merge: true }
-  )
+  await firestoreSet("assinaturas", userId, {
+    plano: "pro",
+    status: "ativo",
+    ativadoEm: new Date(),
+    expiraEm,
+    renovacaoAutomatica: true,
+    ...(subscriptionId ? { psPreApprovalCode: subscriptionId } : {}),
+  })
 
   console.log(`[webhook] Pro ativado: ${userId}, expira ${expiraEm.toISOString()}`)
 }
 
 async function cancelarPro(userId: string): Promise<void> {
-  await getAdminDb().collection("assinaturas").doc(userId).set(
-    {
-      plano: "gratuito",
-      status: "inativo",
-      renovacaoAutomatica: false,
-      canceladoEm: FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  )
+  await firestoreSet("assinaturas", userId, {
+    plano: "gratuito",
+    status: "inativo",
+    renovacaoAutomatica: false,
+    canceladoEm: new Date(),
+  })
   console.log(`[webhook] Assinatura cancelada: ${userId}`)
 }
 
@@ -56,7 +49,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripe = new Stripe(stripeKey)
     let event: Stripe.Event
 
-    // Tenta verificar assinatura com body bruto; se falhar, usa req.body diretamente
     try {
       const rawBody = req.body instanceof Buffer
         ? req.body
@@ -72,7 +64,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         event = req.body as Stripe.Event
       }
     } catch {
-      // Verificação de assinatura falhou — usa o body já parseado pelo Vercel
       console.warn("[webhook] assinatura não verificada, usando req.body diretamente")
       event = req.body as Stripe.Event
     }
@@ -95,8 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (event.type === "customer.subscription.deleted") {
         const sub = event.data.object as Stripe.Subscription
-        const customerId = sub.customer as string
-        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
+        const customer = await stripe.customers.retrieve(sub.customer as string) as Stripe.Customer
         const userId = customer.metadata?.userId
           ?? await buscarUserIdPorEmail(customer.email ?? "")
         if (userId) await cancelarPro(userId)
@@ -104,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (event.type === "invoice.payment_succeeded" || event.type === "invoice_payment.paid") {
         const obj = event.data.object as Stripe.Invoice & { invoice?: string }
-        const customerId = (obj.customer as string) ?? null
+        const customerId = obj.customer as string | undefined
         if (customerId) {
           const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
           const userId = customer.metadata?.userId

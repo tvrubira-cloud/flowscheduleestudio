@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import Stripe from "stripe"
-import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
-import { FieldValue } from "firebase-admin/firestore"
+import { getAdminAuth, firestoreGet, firestoreSet } from "./_lib/firebase-admin.js"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
@@ -21,35 +20,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
-  if (!stripeKey) {
-    return res.status(500).json({ error: "Stripe não configurado" })
-  }
+  if (!stripeKey) return res.status(500).json({ error: "Stripe não configurado" })
 
-  const assinaturaSnap = await getAdminDb().collection("assinaturas").doc(userId).get()
-  if (!assinaturaSnap.exists) {
-    return res.status(404).json({ error: "Assinatura não encontrada" })
-  }
+  const fields = await firestoreGet("assinaturas", userId)
+  if (!fields) return res.status(404).json({ error: "Assinatura não encontrada" })
 
-  const { psPreApprovalCode } = assinaturaSnap.data() as { psPreApprovalCode?: string }
+  const subscriptionId = (fields.psPreApprovalCode as { stringValue?: string } | undefined)?.stringValue
 
-  if (!psPreApprovalCode) {
+  if (!subscriptionId) {
     return res.status(400).json({ error: "ID da assinatura não encontrado. Contate o suporte." })
   }
 
   try {
     const stripe = new Stripe(stripeKey)
+    await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true })
 
-    // Cancela no fim do período atual (não imediatamente)
-    await stripe.subscriptions.update(psPreApprovalCode, {
-      cancel_at_period_end: true,
-    })
-
-    await getAdminDb().collection("assinaturas").doc(userId).update({
+    await firestoreSet("assinaturas", userId, {
       renovacaoAutomatica: false,
-      canceladoEm: FieldValue.serverTimestamp(),
+      canceladoEm: new Date(),
     })
 
-    console.log(`[cancelar-assinatura] Cancelamento agendado: ${userId} / ${psPreApprovalCode}`)
+    console.log(`[cancelar-assinatura] Cancelamento agendado: ${userId}`)
     return res.status(200).json({ ok: true })
   } catch (err) {
     console.error("[cancelar-assinatura]", err)
