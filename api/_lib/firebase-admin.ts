@@ -32,7 +32,7 @@ async function getAccessToken(): Promise<string> {
   if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken
 
   const email = process.env.FIREBASE_CLIENT_EMAIL!
-  const rawKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n")!
+  const rawKey = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n").replace(/^["']|["']$/g, "")
   const now = Math.floor(Date.now() / 1000)
 
   console.log("[firebase-admin] iss:", email)
