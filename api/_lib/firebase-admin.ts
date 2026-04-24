@@ -38,11 +38,11 @@ async function getAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
 
   console.log("[firebase-admin] iss:", email)
-  console.log("[firebase-admin] key starts:", rawKey?.substring(0, 50))
 
   const keyId = process.env.FIREBASE_PRIVATE_KEY_ID
-  console.log("[firebase-admin] kid (FIREBASE_PRIVATE_KEY_ID):", keyId ?? "NAO DEFINIDO")
-  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
+  const header = b64url(Buffer.from(JSON.stringify(
+    keyId ? { alg: "RS256", typ: "JWT", kid: keyId } : { alg: "RS256", typ: "JWT" }
+  )))
   const payload = b64url(Buffer.from(JSON.stringify({
     iss: email,
     aud: "https://oauth2.googleapis.com/token",
@@ -59,7 +59,6 @@ async function getAccessToken(): Promise<string> {
     .replace(/\s+/g, "")
 
   const keyBytes = Buffer.from(pemBody, "base64")
-  console.log("[firebase-admin] keyBytes length:", keyBytes.length)
 
   const cryptoKey = await globalThis.crypto.subtle.importKey(
     "pkcs8",
@@ -75,8 +74,6 @@ async function getAccessToken(): Promise<string> {
     Buffer.from(unsigned)
   )
 
-  console.log("[firebase-admin] sig length:", sigBuffer.byteLength)
-
   const assertion = `${unsigned}.${b64url(Buffer.from(sigBuffer))}`
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -85,14 +82,8 @@ async function getAccessToken(): Promise<string> {
     body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${encodeURIComponent(assertion)}`,
   })
 
-  const json = await tokenRes.json() as { access_token?: string; expires_in?: number; error?: string; error_description?: string }
-  console.log("[firebase-admin] token response:", JSON.stringify({
-    ok: tokenRes.ok,
-    status: tokenRes.status,
-    hasToken: !!json.access_token,
-    error: json.error,
-    error_description: json.error_description,
-  }))
+  const json = await tokenRes.json() as { access_token?: string; expires_in?: number; error?: string }
+  if (!tokenRes.ok) console.error("[firebase-admin] token error:", json.error)
 
   if (!json.access_token) throw new Error(`Token error: ${JSON.stringify(json)}`)
   _cachedToken = json.access_token
