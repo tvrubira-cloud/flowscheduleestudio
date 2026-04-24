@@ -17,7 +17,11 @@ let _db: ReturnType<typeof getFirestore> | undefined
 let _auth: ReturnType<typeof getAuth> | undefined
 
 export function getAdminDb() {
-  if (!_db) _db = getFirestore(initAdmin())
+  if (!_db) {
+    _db = getFirestore(initAdmin())
+    // Usa REST em vez de gRPC para evitar erro SSL no Node.js 18+
+    _db.settings({ preferRest: true })
+  }
   return _db
 }
 
