@@ -38,8 +38,7 @@ async function getAccessToken(): Promise<string> {
   console.log("[firebase-admin] iss:", email)
   console.log("[firebase-admin] key starts:", rawKey?.substring(0, 40))
 
-  const keyId = process.env.FIREBASE_PRIVATE_KEY_ID!
-  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT", kid: keyId })))
+  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
   const payload = b64url(Buffer.from(JSON.stringify({
     iss: email,
     aud: "https://oauth2.googleapis.com/token",
