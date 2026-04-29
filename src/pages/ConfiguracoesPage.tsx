@@ -53,7 +53,7 @@ export default function ConfiguracoesPage() {
 
   const verificarStatus = async () => {
     try {
-      const r = await fetch("/api/zapi-status")
+      const r = await fetch("/api/whatsapp?action=status")
       const d = await r.json() as { conectado: boolean }
       setStatusWA(d.conectado ? "conectado" : "desconectado")
       return d.conectado
@@ -70,7 +70,7 @@ export default function ConfiguracoesPage() {
     setCarregandoQr(true)
     setQrErro(null)
     try {
-      const r = await fetch("/api/zapi-qrcode")
+      const r = await fetch("/api/whatsapp?action=qrcode")
       const d = await r.json() as { qr?: string; erro?: string }
       
       if (d.qr) {
@@ -95,7 +95,7 @@ export default function ConfiguracoesPage() {
     setStatusWA("verificando")
     ultimoLogoutRef.current = Date.now()
     try {
-      const r = await fetch("/api/zapi-logout", { method: "POST" })
+      const r = await fetch("/api/whatsapp?action=logout", { method: "POST" })
       const d = await r.json() as { ok: boolean }
       if (d.ok) {
         toast.success("WhatsApp desconectado com sucesso!")
@@ -541,7 +541,7 @@ export default function ConfiguracoesPage() {
                 className="gap-1.5 text-xs bg-[#25D366] hover:bg-[#1ebe5d] text-white border-none"
                 onClick={() => { setQrBase64(null); verificarStatus() }}
               >
-                <CheckCircle className="w-3 h-3" /> Já escaniei
+                <CheckCircle className="w-3 h-3" /> Já escaneei
               </Button>
             </div>
           </CardContent>

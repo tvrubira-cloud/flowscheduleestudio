@@ -13,7 +13,7 @@
     }
   ],
   "functions": {
-    "api/**/*.ts": {
+    "api/*.ts": {
       "includeFiles": "api/_lib/**"
     }
   }
