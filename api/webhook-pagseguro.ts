@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
           const userId = customer.metadata?.userId
             ?? await buscarUserIdPorEmail(customer.email ?? "")
-          if (userId) await ativarPro(userId, (obj.subscription ?? obj.invoice) as string)
+          if (userId) await ativarPro(userId, ((obj as any).subscription ?? (obj as any).invoice) as string)
         }
       }
     } catch (err) {

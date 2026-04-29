@@ -1,4 +1,4 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
+import type { VercelRequest, VercelResponse } from "@vercel/node"
 import { getAdminDb } from "./_lib/firebase-admin.js"
 import { enviarLembreteAgendamento } from "./_lib/email.js"
 import { FieldValue } from "firebase-admin/firestore"
@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .get()
 
     // Filtra os que ainda não receberam lembrete
-    const pendentes = snap.docs.filter((d) => !d.data().lembreteEnviado)
+    const pendentes = snap.docs.filter((d: any) => !d.data().lembreteEnviado)
 
     let enviados = 0
     let erros = 0

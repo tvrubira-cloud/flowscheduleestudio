@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, cert } from "firebase-admin/app"
 import { getAuth } from "firebase-admin/auth"
+import { getFirestore } from "firebase-admin/firestore"
 
 function initAdmin() {
   if (getApps().length) return getApp()
@@ -13,10 +14,16 @@ function initAdmin() {
 }
 
 let _auth: ReturnType<typeof getAuth> | undefined
+let _db: ReturnType<typeof getFirestore> | undefined
 
 export function getAdminAuth() {
   if (!_auth) _auth = getAuth(initAdmin())
   return _auth
+}
+
+export function getAdminDb() {
+  if (!_db) _db = getFirestore(initAdmin())
+  return _db
 }
 
 // ── Firestore via REST (evita bug jwa + OpenSSL 3 no Node.js 18) ─────────────
