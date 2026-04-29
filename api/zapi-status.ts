@@ -7,7 +7,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end()
   try {
     const r = await fetch(`${BASE}/getStateInstance/${TOKEN}`)
-    const d = await r.json() as { stateInstance?: string }
+    const text = await r.text()
+    let d: any = {}
+    try { d = JSON.parse(text) } catch { d = {} }
     const conectado = d.stateInstance === "authorized"
     return res.status(200).json({ conectado })
   } catch {

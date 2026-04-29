@@ -1,60 +1,99 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(238 18% 4%);
+  /* Dark (Default) */
+  --color-background: hsl(240 25% 3%);
   --color-foreground: hsl(0 0% 98%);
-  --color-card: hsl(240 12% 7%);
+  --color-card: hsl(240 20% 5%);
   --color-card-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(240 12% 7%);
+  --color-popover: hsl(240 20% 5%);
   --color-popover-foreground: hsl(0 0% 98%);
-  --color-primary: hsl(263.4 70% 50.4%);
+  --color-primary: hsl(263 85% 65%);
   --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(240 3.7% 15.9%);
+  --color-secondary: hsl(240 5% 12%);
   --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(240 3.7% 15.9%);
-  --color-muted-foreground: hsl(240 5% 64.9%);
-  --color-accent: hsl(240 3.7% 15.9%);
+  --color-muted: hsl(240 5% 12%);
+  --color-muted-foreground: hsl(240 5% 65%);
+  --color-accent: hsl(263 45% 20%);
   --color-accent-foreground: hsl(0 0% 98%);
-  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive: hsl(0 85% 60%);
   --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(240 3.7% 15.9%);
-  --color-input: hsl(240 3.7% 15.9%);
-  --color-ring: hsl(240 4.9% 83.9%);
-  --radius-xl: 0.75rem;
+  --color-border: hsl(240 5% 15%);
+  --color-input: hsl(240 5% 15%);
+  --color-ring: hsl(263 85% 65%);
+  --radius-xl: 1rem;
 }
 
 @layer base {
+  .light {
+    --color-background: hsl(0 0% 100%);
+    --color-foreground: hsl(240 10% 3.9%);
+    --color-card: hsl(0 0% 100%);
+    --color-card-foreground: hsl(240 10% 3.9%);
+    --color-popover: hsl(0 0% 100%);
+    --color-popover-foreground: hsl(240 10% 3.9%);
+    --color-primary: hsl(263 85% 65%);
+    --color-primary-foreground: hsl(210 40% 98%);
+    --color-secondary: hsl(240 4.8% 95.9%);
+    --color-secondary-foreground: hsl(240 5.9% 10%);
+    --color-muted: hsl(240 4.8% 95.9%);
+    --color-muted-foreground: hsl(240 5% 35%);
+    --color-accent: hsl(240 4.8% 95.9%);
+    --color-accent-foreground: hsl(240 5.9% 10%);
+    --color-border: hsl(240 5.9% 90%);
+    --color-input: hsl(240 5.9% 90%);
+    --color-ring: hsl(263 85% 65%);
+  }
+
   * {
-    @apply border-border;
+    @apply border-border outline-none transition-colors duration-200;
   }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     background-image:
-      radial-gradient(ellipse 80% 55% at 15% 8%,  rgba(99, 102, 241, 0.14) 0%, transparent 65%),
-      radial-gradient(ellipse 65% 50% at 85% 85%, rgba(14, 165, 233, 0.10) 0%, transparent 65%),
-      radial-gradient(ellipse 55% 70% at 50% 45%, rgba(168, 85, 247, 0.07) 0%, transparent 70%);
+      radial-gradient(at 0% 0%, hsla(263, 85%, 65%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(230, 85%, 65%, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, hsla(263, 85%, 65%, 0.05) 0px, transparent 50%);
     background-attachment: fixed;
+  }
+
+  .light body {
+    background-image:
+      radial-gradient(at 0% 0%, hsla(263, 85%, 65%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(210, 85%, 65%, 0.03) 0px, transparent 50%);
   }
 }
 
 @utility glass {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.light .glass {
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 @utility glass-card {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(15, 15, 25, 0.4);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.light .glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
 }
 
 @utility premium-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  background: linear-gradient(135deg, hsl(263 85% 65%) 0%, hsl(280 85% 60%) 100%);
 }
 
 @utility glow-primary {
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05);
+  box-shadow: 0 0 40px -10px hsla(263, 85%, 65%, 0.3);
 }
+

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Sidebar } from "./Sidebar"
 import { useAppStore } from "@/store/useAppStore"
 import { useAssinatura } from "@/hooks/useAssinatura"
@@ -80,7 +81,19 @@ function TrialBanner() {
 }
 
 export function AppShell() {
-  const { activeTab, user, setStatusWA } = useAppStore()
+  const { activeTab, user, setStatusWA, theme } = useAppStore()
+
+  useEffect(() => {
+    const root = window.document.documentElement
+    root.classList.remove("light", "dark")
+
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.add(systemTheme)
+    } else {
+      root.classList.add(theme)
+    }
+  }, [theme])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -101,29 +114,40 @@ export function AppShell() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative">
       <TrialBanner />
 
-      <div className="flex flex-grow overflow-hidden">
+      <div className="flex flex-grow overflow-hidden relative">
         <Sidebar />
 
-        <main id="main-content" className="flex-grow p-4 md:p-10 overflow-y-auto pb-24 md:pb-10">
-          <div className="max-w-5xl mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Bem-vindo, {user?.email?.split("@")[0] ?? "usuário"}
-                </h1>
-                <p className="text-muted-foreground">Gerencie seus clientes e agendamentos com IA.</p>
-              </div>
-            </div>
+        <main id="main-content" className="flex-grow p-4 md:p-8 overflow-y-auto pb-24 md:pb-10 scroll-smooth">
+          <div className="max-w-6xl mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="space-y-8"
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60">
+                      Bem-vindo, {user?.email?.split("@")[0] ?? "usuário"}
+                    </h1>
+                    <p className="text-muted-foreground text-lg">Gerencie seu salão com inteligência artificial.</p>
+                  </div>
+                </div>
 
-            <Suspense fallback={<PageLoader />}>
-              {activeTab === "dashboard" && <DashboardPage />}
-              {activeTab === "clientes" && <ClientesPage />}
-              {activeTab === "financeiro" && <FinanceiroPage />}
-              {activeTab === "configuracoes" && <ConfiguracoesPage />}
-              {activeTab === "relatorios" && <RelatoriosPage />}
-              {activeTab === "promocoes" && <PromocoesPage />}
-              {activeTab === "admin" && <AdminPage />}
-            </Suspense>
+                <Suspense fallback={<PageLoader />}>
+                  {activeTab === "dashboard" && <DashboardPage />}
+                  {activeTab === "clientes" && <ClientesPage />}
+                  {activeTab === "financeiro" && <FinanceiroPage />}
+                  {activeTab === "configuracoes" && <ConfiguracoesPage />}
+                  {activeTab === "relatorios" && <RelatoriosPage />}
+                  {activeTab === "promocoes" && <PromocoesPage />}
+                  {activeTab === "admin" && <AdminPage />}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

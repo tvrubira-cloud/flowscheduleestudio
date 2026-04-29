@@ -42,31 +42,44 @@ export default function ConfiguracoesPage() {
   const [form, setForm] = useState<Disponibilidade>(disponibilidade)
   const [copiado, setCopiado] = useState(false)
   const [uploadandoLogo, setUploadandoLogo] = useState(false)
+  const ultimoLogoutRef = useRef<number>(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // WhatsApp
   const [qrBase64, setQrBase64] = useState<string | null>(null)
   const [qrErro, setQrErro] = useState<string | null>(null)
   const [carregandoQr, setCarregandoQr] = useState(false)
+  const [confirmandoDesconexao, setConfirmandoDesconexao] = useState(false)
 
-  const verificarStatus = () => {
-    setStatusWA("verificando")
-    fetch("/api/zapi-status")
-      .then((r) => r.json())
-      .then((d: { conectado: boolean }) => setStatusWA(d.conectado ? "conectado" : "desconectado"))
-      .catch(() => setStatusWA("desconectado"))
+  const verificarStatus = async () => {
+    try {
+      const r = await fetch("/api/zapi-status")
+      const d = await r.json() as { conectado: boolean }
+      setStatusWA(d.conectado ? "conectado" : "desconectado")
+      return d.conectado
+    } catch {
+      setStatusWA("desconectado")
+      return false
+    }
   }
 
   const buscarQr = async () => {
+    // Se estiver conectado ou verificando, não busca QR
+    if (statusWA === "conectado") return
+
     setCarregandoQr(true)
     setQrErro(null)
     try {
       const r = await fetch("/api/zapi-qrcode")
       const d = await r.json() as { qr?: string; erro?: string }
+      
       if (d.qr) {
         setQrBase64(d.qr)
       } else if (d.erro === "alreadyLogged") {
-        verificarStatus()
+        // Só volta para conectado se não tiver acabado de fazer logout (lockout de 10s)
+        if (Date.now() - ultimoLogoutRef.current > 10000) {
+          verificarStatus()
+        }
       } else {
         setQrErro(d.erro ?? "QR não disponível")
       }
@@ -77,14 +90,69 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  const desconectar = async () => {
+    setConfirmandoDesconexao(false)
+    setStatusWA("verificando")
+    ultimoLogoutRef.current = Date.now()
+    try {
+      const r = await fetch("/api/zapi-logout", { method: "POST" })
+      const d = await r.json() as { ok: boolean }
+      if (d.ok) {
+        toast.success("WhatsApp desconectado com sucesso!")
+        setStatusWA("desconectado")
+        setQrBase64(null)
+        // Primeira busca de QR após 5s para dar tempo da API processar
+        setTimeout(buscarQr, 5000)
+      } else {
+        toast.error("Erro ao desconectar.")
+        verificarStatus()
+      }
+    } catch {
+      toast.error("Erro de comunicação.")
+      verificarStatus()
+    }
+  }
+
   useEffect(() => { carregar() }, [])
   useEffect(() => { setForm(disponibilidade) }, [disponibilidade])
 
+  // Efeito principal de status e QR
   useEffect(() => {
-    buscarQr()
-    const interval = setInterval(buscarQr, 30000)
-    return () => clearInterval(interval)
+    verificarStatus()
+    // Polling de status a cada 30s
+    const statusInterval = setInterval(verificarStatus, 30000)
+    return () => clearInterval(statusInterval)
   }, [])
+
+  // Polling de QR Code — Só quando estiver desconectado e sem QR
+  useEffect(() => {
+    if (statusWA !== "desconectado") {
+      setQrBase64(null)
+      return
+    }
+
+    buscarQr()
+    const qrInterval = setInterval(() => {
+      if (statusWA === "desconectado") buscarQr()
+    }, 15000)
+
+    return () => clearInterval(qrInterval)
+  }, [statusWA])
+
+  // Detecção automática de Scan
+  useEffect(() => {
+    if (statusWA !== "desconectado" || !qrBase64) return
+
+    const scanCheck = setInterval(async () => {
+      const conectado = await verificarStatus()
+      if (conectado) {
+        setQrBase64(null)
+        toast.success("WhatsApp conectado com sucesso!")
+      }
+    }, 5000)
+
+    return () => clearInterval(scanCheck)
+  }, [statusWA, qrBase64])
 
   const linkPublico = `${window.location.origin}/booking/${user?.uid ?? ""}`
 
@@ -400,6 +468,36 @@ export default function ConfiguracoesPage() {
               >
                 <Wifi className="w-3 h-3" /> Verificar
               </Button>
+              {!confirmandoDesconexao ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 text-xs h-8 gap-1.5 ml-auto"
+                  onClick={() => setConfirmandoDesconexao(true)}
+                >
+                  <WifiOff className="w-3 h-3" /> Desconectar
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-[10px] font-bold text-red-400 uppercase">Confirmar?</span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 text-xs px-3"
+                    onClick={desconectar}
+                  >
+                    Sim
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs px-3"
+                    onClick={() => setConfirmandoDesconexao(false)}
+                  >
+                    Não
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         )}
@@ -418,11 +516,13 @@ export default function ConfiguracoesPage() {
                 {!carregandoQr && qrBase64 && (
                   <img src={qrBase64} alt="QR Code WhatsApp" className="w-full h-full object-contain" />
                 )}
-                {!carregandoQr && qrErro && (
+                {!carregandoQr && !qrBase64 && qrErro && (
                   <p className="text-xs text-red-400 text-center px-2">{qrErro}</p>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">QR Code atualiza automaticamente a cada 30s</p>
+              <p className="text-xs text-muted-foreground">
+                {qrBase64 ? "Escaneie o QR Code — conexão detectada automaticamente" : "QR Code atualiza automaticamente"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">

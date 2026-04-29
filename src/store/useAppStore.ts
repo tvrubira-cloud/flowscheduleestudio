@@ -21,6 +21,9 @@ interface AppState {
   // WhatsApp (não persistido)
   statusWA: "verificando" | "conectado" | "desconectado"
 
+  // Theme
+  theme: "light" | "dark" | "system"
+
   // Actions
   setUser: (user: AppUser | null) => void
   setIsDemo: (isDemo: boolean) => void
@@ -28,6 +31,7 @@ interface AppState {
   setClientes: (clientes: Cliente[]) => void
   addCliente: (cliente: Cliente) => void
   setActiveTab: (tab: ActiveTab) => void
+  setTheme: (theme: "light" | "dark" | "system") => void
   setSchedulingDate: (date: string) => void
   setSchedulingTime: (time: string) => void
   setStatusWA: (status: "verificando" | "conectado" | "desconectado") => void
@@ -40,6 +44,7 @@ const initialState = {
   authLoading: true,
   clientes: [],
   activeTab: "dashboard" as ActiveTab,
+  theme: "dark" as const,
   schedulingDate: "",
   schedulingTime: "",
   statusWA: "verificando" as const,
@@ -57,6 +62,7 @@ export const useAppStore = create<AppState>()(
       addCliente: (cliente) =>
         set((state) => ({ clientes: [...state.clientes, cliente] })),
       setActiveTab: (activeTab) => set({ activeTab }),
+      setTheme: (theme) => set({ theme }),
       setSchedulingDate: (schedulingDate) => set({ schedulingDate }),
       setSchedulingTime: (schedulingTime) => set({ schedulingTime }),
       setStatusWA: (statusWA) => set({ statusWA }),
@@ -68,6 +74,7 @@ export const useAppStore = create<AppState>()(
         clientes: state.clientes,
         isDemo: state.isDemo,
         activeTab: state.activeTab,
+        theme: state.theme,
       }),
     }
   )

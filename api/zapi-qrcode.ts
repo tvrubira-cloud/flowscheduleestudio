@@ -7,7 +7,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).end()
   try {
     const r = await fetch(`${BASE}/qr/${TOKEN}`)
-    const d = await r.json() as { type?: string; message?: string }
+    const text = await r.text()
+    let d: any = {}
+    try { d = JSON.parse(text) } catch { d = { message: text } }
 
     if (d.type === "qrCode" && d.message) {
       const qr = d.message.startsWith("data:") ? d.message : `data:image/png;base64,${d.message}`
