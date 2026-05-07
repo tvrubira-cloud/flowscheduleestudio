@@ -44,12 +44,7 @@ async function getAccessToken(): Promise<string> {
     .replace(/^["']|["']$/g, "")
   const now = Math.floor(Date.now() / 1000)
 
-  console.log("[firebase-admin] iss:", email)
-
-  const keyId = process.env.FIREBASE_PRIVATE_KEY_ID
-  const header = b64url(Buffer.from(JSON.stringify(
-    keyId ? { alg: "RS256", typ: "JWT", kid: keyId } : { alg: "RS256", typ: "JWT" }
-  )))
+  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
   const payload = b64url(Buffer.from(JSON.stringify({
     iss: email,
     aud: "https://oauth2.googleapis.com/token",
