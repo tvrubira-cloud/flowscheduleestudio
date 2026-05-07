@@ -125,6 +125,21 @@ function toFValue(v: unknown): FValue {
   return { stringValue: String(v) }
 }
 
+export function fromFirestoreFields(fields: Record<string, unknown> | null): Record<string, unknown> {
+  if (!fields) return {}
+  const result: Record<string, unknown> = {}
+  for (const [key, rawVal] of Object.entries(fields)) {
+    const fv = rawVal as Record<string, unknown>
+    if ("stringValue" in fv) result[key] = fv.stringValue
+    else if ("booleanValue" in fv) result[key] = fv.booleanValue
+    else if ("integerValue" in fv) result[key] = Number(fv.integerValue)
+    else if ("doubleValue" in fv) result[key] = fv.doubleValue
+    else if ("timestampValue" in fv) result[key] = new Date(fv.timestampValue as string)
+    else if ("nullValue" in fv) result[key] = null
+  }
+  return result
+}
+
 export async function firestoreGet(
   collection: string,
   docId: string
@@ -142,6 +157,19 @@ export async function firestoreGet(
 
   const doc = await res.json() as { fields?: Record<string, unknown> }
   return doc.fields ?? null
+}
+
+export async function firestoreDelete(
+  collection: string,
+  docId: string
+): Promise<void> {
+  const projectId = process.env.FIREBASE_PROJECT_ID!
+  const token = await getAccessToken()
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
+  )
+  if (!res.ok && res.status !== 404) throw new Error(`Firestore DELETE ${res.status}: ${await res.text()}`)
 }
 
 export async function firestoreSet(

@@ -1,6 +1,5 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node"
-import { getAdminDb, getAdminAuth } from "./_lib/firebase-admin.js"
-import { FieldValue } from "firebase-admin/firestore"
+import type { VercelRequest, VercelResponse } from "@vercel/node"
+import { getAdminAuth, firestoreGet, firestoreSet, fromFirestoreFields } from "./_lib/firebase-admin.js"
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).end()
@@ -10,32 +9,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const decoded = await getAdminAuth().verifyIdToken(token)
-    const adminSnap = await getAdminDb().collection("assinaturas").doc(decoded.uid).get()
-    if (!adminSnap.data()?.isAdmin) return res.status(403).json({ error: "Forbidden" })
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminFields = fromFirestoreFields(await firestoreGet("assinaturas", decoded.uid))
+    const isAdmin = !!(adminFields.isAdmin || (adminEmail && decoded.email === adminEmail))
+    if (!isAdmin) return res.status(403).json({ error: "Forbidden" })
 
     const { targetUid, dias = 30 } = req.body as { targetUid: string; dias?: number }
     if (!targetUid) return res.status(400).json({ error: "targetUid required" })
 
-    const ref = getAdminDb().collection("assinaturas").doc(targetUid)
-    const snap = await ref.get()
-
-    // Estende a partir da data atual de expiração (ou de agora)
+    const snap = fromFirestoreFields(await firestoreGet("assinaturas", targetUid))
     const agora = new Date()
-    const expiraAtual = (snap.data()?.expiraEm as { toDate?: () => Date } | undefined)?.toDate?.()
+    const expiraAtual = snap.expiraEm instanceof Date ? snap.expiraEm : undefined
     const base = expiraAtual && expiraAtual > agora ? expiraAtual : agora
     const expiraEm = new Date(base)
     expiraEm.setDate(expiraEm.getDate() + dias)
 
-    await ref.set(
-      {
-        plano: "pro",
-        status: "ativo",
-        expiraEm,
-        renovacaoAutomatica: false,
-        ativadoManualmenteEm: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    )
+    await firestoreSet("assinaturas", targetUid, {
+      plano: "pro",
+      status: "ativo",
+      expiraEm,
+      renovacaoAutomatica: false,
+    })
 
     console.log(`[admin-ativar] Pro dado para ${targetUid} por ${dias} dias, expira ${expiraEm.toISOString()}`)
     return res.status(200).json({ ok: true, expiraEm: expiraEm.toISOString() })

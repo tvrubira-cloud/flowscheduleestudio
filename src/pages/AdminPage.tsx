@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import {
   RefreshCw, Send, Loader2, Inbox, Clock, CheckCircle, Users,
   Phone, Mail, Calendar, ShieldCheck, Zap, BadgeCheck, UserX, Gift,
+  Store, Timer, Trash2,
 } from "lucide-react"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -67,7 +68,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     admin:    { label: "Admin",   className: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",  icon: <ShieldCheck className="w-3 h-3" /> },
     pro:      { label: "Pro",     className: "bg-blue-500/15 text-blue-400 border-blue-500/20",        icon: <BadgeCheck className="w-3 h-3" /> },
-    trial:    { label: "Trial",   className: "bg-green-500/15 text-green-400 border-green-500/20",     icon: <Zap className="w-3 h-3" /> },
+    trial:    { label: "Teste",   className: "bg-green-500/15 text-green-400 border-green-500/20",     icon: <Zap className="w-3 h-3" /> },
     gratuito: { label: "Grátis",  className: "bg-zinc-500/15 text-zinc-400 border-zinc-500/20",        icon: <UserX className="w-3 h-3" /> },
   }
   const s = map[status] ?? map.gratuito
@@ -83,17 +84,25 @@ function StatusBadge({ status }: { status: string }) {
 interface UsuarioSaaS {
   uid: string
   email: string
+  nomeNegocio: string | null
   criadoEm: string
   statusLabel: string
   isAdmin: boolean
   expiraEm: string | null
   trialExpiraEm: string | null
+  trialDaysLeft: number | null
   ultimoBonusIndicacao: string | null
   referidoPor: string | null
 }
 
-function LinhaUsuario({ usuario, onAtivar }: { usuario: UsuarioSaaS; onAtivar: (uid: string) => Promise<void> }) {
+function LinhaUsuario({ usuario, onAtivar, onExcluir }: {
+  usuario: UsuarioSaaS
+  onAtivar: (uid: string) => Promise<void>
+  onExcluir: (uid: string, email: string) => Promise<void>
+}) {
   const [ativando, setAtivando] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
   const expira = usuario.expiraEm ? new Date(usuario.expiraEm).toLocaleDateString("pt-BR") : null
   const criado = new Date(usuario.criadoEm).toLocaleDateString("pt-BR")
   const proximoBonus = usuario.ultimoBonusIndicacao
@@ -106,19 +115,42 @@ function LinhaUsuario({ usuario, onAtivar }: { usuario: UsuarioSaaS; onAtivar: (
     setAtivando(false)
   }
 
+  const handleExcluir = async () => {
+    setExcluindo(true)
+    await onExcluir(usuario.uid, usuario.email)
+    setExcluindo(false)
+    setConfirmando(false)
+  }
+
   return (
     <div className="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-white/5 gap-3">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-medium text-sm truncate">{usuario.email}</p>
+          {usuario.nomeNegocio && (
+            <p className="font-semibold text-sm truncate flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-primary shrink-0" />
+              {usuario.nomeNegocio}
+            </p>
+          )}
           <StatusBadge status={usuario.statusLabel} />
         </div>
+        <p className="text-xs text-muted-foreground truncate">{usuario.email}</p>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Calendar className="w-3 h-3" />cadastro: {criado}
           </p>
-          {expira && (
-            <p className="text-xs text-muted-foreground">Pro até {expira}</p>
+          {usuario.statusLabel === "trial" && usuario.trialDaysLeft !== null && (
+            <p className={`text-xs flex items-center gap-1 font-medium ${
+              usuario.trialDaysLeft <= 2 ? "text-red-400" : usuario.trialDaysLeft <= 4 ? "text-yellow-400" : "text-green-400"
+            }`}>
+              <Timer className="w-3 h-3" />
+              {usuario.trialDaysLeft <= 0 ? "expira hoje" : `${usuario.trialDaysLeft} dia${usuario.trialDaysLeft === 1 ? "" : "s"} de teste`}
+            </p>
+          )}
+          {expira && usuario.statusLabel === "pro" && (
+            <p className="text-xs text-blue-400 flex items-center gap-1">
+              <BadgeCheck className="w-3 h-3" />Pro até {expira}
+            </p>
           )}
           {usuario.referidoPor && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -131,12 +163,47 @@ function LinhaUsuario({ usuario, onAtivar }: { usuario: UsuarioSaaS; onAtivar: (
         </div>
       </div>
       {!usuario.isAdmin && (
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-white/10 shrink-0"
-          onClick={handleAtivar} disabled={ativando}>
-          {ativando ? <Loader2 className="w-3 h-3 animate-spin" /> : <BadgeCheck className="w-3 h-3 text-blue-400" />}
-          Dar 30 dias Pro
-        </Button>
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-white/10"
+            onClick={handleAtivar} disabled={ativando || excluindo}>
+            {ativando ? <Loader2 className="w-3 h-3 animate-spin" /> : <BadgeCheck className="w-3 h-3 text-blue-400" />}
+            Dar 30 dias Pro
+          </Button>
+          {confirmando ? (
+            <div className="flex gap-1">
+              <Button size="sm" variant="destructive" className="h-7 text-xs flex-1"
+                onClick={handleExcluir} disabled={excluindo}>
+                {excluindo ? <Loader2 className="w-3 h-3 animate-spin" /> : "Confirmar"}
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs px-2 border border-white/10"
+                onClick={() => setConfirmando(false)} disabled={excluindo}>
+                Cancelar
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5 border border-white/10 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              onClick={() => setConfirmando(true)}>
+              <Trash2 className="w-3 h-3" />Excluir
+            </Button>
+          )}
+        </div>
       )}
+    </div>
+  )
+}
+
+// ─── Card de métrica ──────────────────────────────────────────────────────────
+
+function MetricCard({ label, value, icon, className }: {
+  label: string; value: number; icon: React.ReactNode; className: string
+}) {
+  return (
+    <div className={`flex items-center gap-3 p-4 rounded-xl border ${className}`}>
+      <div className="shrink-0">{icon}</div>
+      <div>
+        <p className="text-2xl font-bold leading-none">{value}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+      </div>
     </div>
   )
 }
@@ -144,11 +211,14 @@ function LinhaUsuario({ usuario, onAtivar }: { usuario: UsuarioSaaS; onAtivar: (
 // ─── Página Admin ─────────────────────────────────────────────────────────────
 
 type Aba = "pedidos" | "clientes" | "usuarios"
+type Filtro = "todos" | "trial" | "pro" | "gratuito"
 
 export default function AdminPage() {
   const { pedidos, loading, enviando, enviarCodigo, recarregar } = usePedidos()
   const { user } = useAppStore()
   const [aba, setAba] = useState<Aba>("usuarios")
+  const [filtro, setFiltro] = useState<Filtro>("todos")
+  const [busca, setBusca] = useState("")
   const [clientes, setClientes] = useState<ClienteCadastrado[]>([])
   const [carregandoClientes, setCarregandoClientes] = useState(false)
   const [usuarios, setUsuarios] = useState<UsuarioSaaS[]>([])
@@ -158,9 +228,8 @@ export default function AdminPage() {
     if (!user) return
     setCarregandoUsuarios(true)
     try {
-      const { getAuth } = await import("firebase/auth")
       const { auth } = await import("@/lib/firebase")
-      const token = await getAuth(auth ?? undefined).currentUser?.getIdToken()
+      const token = await auth?.currentUser?.getIdToken()
       if (!token) return
 
       const res = await fetch("/api/admin-usuarios", {
@@ -169,18 +238,37 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Erro ao carregar")
       const data = await res.json()
       setUsuarios(data.usuarios)
-    } catch {
+    } catch (e) {
+      console.error("[carregarUsuarios]", e)
       toast.error("Erro ao carregar usuários.")
     } finally {
       setCarregandoUsuarios(false)
     }
   }
 
+  const excluirUsuario = async (targetUid: string, email: string) => {
+    try {
+      const { auth } = await import("@/lib/firebase")
+      const token = await auth?.currentUser?.getIdToken()
+      if (!token) return
+
+      const res = await fetch("/api/admin-excluir", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUid }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(`${email} excluído com sucesso.`)
+      setUsuarios((prev) => prev.filter((u) => u.uid !== targetUid))
+    } catch {
+      toast.error("Erro ao excluir. Tente novamente.")
+    }
+  }
+
   const ativarUsuario = async (targetUid: string) => {
     try {
-      const { getAuth } = await import("firebase/auth")
       const { auth } = await import("@/lib/firebase")
-      const token = await getAuth(auth ?? undefined).currentUser?.getIdToken()
+      const token = await auth?.currentUser?.getIdToken()
       if (!token) return
 
       const res = await fetch("/api/admin-ativar", {
@@ -218,6 +306,22 @@ export default function AdminPage() {
     }).finally(() => setCarregandoClientes(false))
   }, [aba, user])
 
+  // Métricas (excluindo o próprio admin)
+  const saloesReais = usuarios.filter((u) => !u.isAdmin)
+  const totalTrial = saloesReais.filter((u) => u.statusLabel === "trial").length
+  const totalPro = saloesReais.filter((u) => u.statusLabel === "pro").length
+  const totalGratuito = saloesReais.filter((u) => u.statusLabel === "gratuito").length
+
+  // Filtro + busca
+  const usuariosFiltrados = usuarios.filter((u) => {
+    if (filtro !== "todos" && u.statusLabel !== filtro) return false
+    if (busca.trim()) {
+      const q = busca.toLowerCase()
+      return u.email.toLowerCase().includes(q) || (u.nomeNegocio ?? "").toLowerCase().includes(q)
+    }
+    return true
+  })
+
   return (
     <motion.div key="admin" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
       className="max-w-3xl mx-auto space-y-6">
@@ -234,9 +338,9 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-white/5 rounded-xl p-1">
         {([
-          { id: "usuarios", label: "Usuários", icon: <ShieldCheck className="w-4 h-4" />, count: usuarios.length },
-          { id: "pedidos",  label: "Pedidos",  icon: <Inbox className="w-4 h-4" />,      count: pedidos.length },
-          { id: "clientes", label: "Clientes", icon: <Users className="w-4 h-4" />,      count: clientes.length || 0 },
+          { id: "usuarios", label: "Salões",   icon: <Store className="w-4 h-4" />,  count: saloesReais.length },
+          { id: "pedidos",  label: "Pedidos",  icon: <Inbox className="w-4 h-4" />,  count: pedidos.length },
+          { id: "clientes", label: "Clientes", icon: <Users className="w-4 h-4" />,  count: clientes.length || 0 },
         ] as const).map(({ id, label, icon, count }) => (
           <button key={id} onClick={() => setAba(id as Aba)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -248,34 +352,80 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Aba Usuários SaaS */}
+      {/* Aba Salões */}
       {aba === "usuarios" && (
-        <Card className="border-white/5 bg-zinc-900/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              Donos de salão cadastrados
-            </CardTitle>
-            <CardDescription>
-              Todos os usuários do FlowSchedule AI com seu status de plano.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {carregandoUsuarios ? (
-              <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />Carregando...
-              </div>
-            ) : usuarios.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm">Nenhum usuário encontrado.</div>
-            ) : (
-              <div className="space-y-3">
-                {usuarios.map((u) => (
-                  <LinhaUsuario key={u.uid} usuario={u} onAtivar={ativarUsuario} />
+        <div className="space-y-4">
+          {/* Cards de métricas */}
+          {!carregandoUsuarios && saloesReais.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <MetricCard label="Total de salões" value={saloesReais.length}
+                icon={<Store className="w-5 h-5 text-muted-foreground" />}
+                className="bg-white/5 border-white/5" />
+              <MetricCard label="Em teste" value={totalTrial}
+                icon={<Zap className="w-5 h-5 text-green-400" />}
+                className="bg-green-500/5 border-green-500/15" />
+              <MetricCard label="Plano Pro" value={totalPro}
+                icon={<BadgeCheck className="w-5 h-5 text-blue-400" />}
+                className="bg-blue-500/5 border-blue-500/15" />
+              <MetricCard label="Sem plano" value={totalGratuito}
+                icon={<UserX className="w-5 h-5 text-zinc-400" />}
+                className="bg-zinc-500/5 border-zinc-500/15" />
+            </div>
+          )}
+
+          <Card className="border-white/5 bg-zinc-900/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Store className="w-4 h-4 text-primary" />Salões cadastrados
+              </CardTitle>
+              <CardDescription>Todos os salões com seu status de plano atual.</CardDescription>
+
+              <input
+                type="text"
+                placeholder="Buscar por nome ou e-mail..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="mt-2 w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/50"
+              />
+
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {([
+                  { id: "todos",    label: "Todos",     count: saloesReais.length },
+                  { id: "trial",    label: "Em teste",  count: totalTrial },
+                  { id: "pro",      label: "Pro",       count: totalPro },
+                  { id: "gratuito", label: "Sem plano", count: totalGratuito },
+                ] as const).map(({ id, label, count }) => (
+                  <button key={id} onClick={() => setFiltro(id)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-colors ${
+                      filtro === id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-white/5 border-white/10 text-muted-foreground hover:text-foreground"
+                    }`}>
+                    {label}
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${filtro === id ? "bg-white/20" : "bg-white/10"}`}>
+                      {count}
+                    </span>
+                  </button>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {carregandoUsuarios ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />Carregando...
+                </div>
+              ) : usuariosFiltrados.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground text-sm">Nenhum salão encontrado.</div>
+              ) : (
+                <div className="space-y-3">
+                  {usuariosFiltrados.map((u) => (
+                    <LinhaUsuario key={u.uid} usuario={u} onAtivar={ativarUsuario} onExcluir={excluirUsuario} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Aba Pedidos */}
