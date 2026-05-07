@@ -26,70 +26,17 @@ export function getAdminDb() {
   return _db
 }
 
-// ── Firestore via REST (evita bug jwa + OpenSSL 3 no Node.js 18) ─────────────
+// ── Firestore via REST ────────────────────────────────────────────────────────
 
 let _cachedToken: string | null = null
 let _tokenExpiry = 0
 
-function b64url(buf: Buffer): string {
-  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
-}
-
 async function getAccessToken(): Promise<string> {
   if (_cachedToken && Date.now() < _tokenExpiry) return _cachedToken
-
-  const email = process.env.FIREBASE_CLIENT_EMAIL!
-  const rawKey = (process.env.FIREBASE_PRIVATE_KEY ?? "")
-    .replace(/\\n/g, "\n")
-    .replace(/^["']|["']$/g, "")
-  const now = Math.floor(Date.now() / 1000)
-
-  const header = b64url(Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })))
-  const payload = b64url(Buffer.from(JSON.stringify({
-    iss: email,
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-    scope: "https://www.googleapis.com/auth/cloud-platform",
-  })))
-
-  const unsigned = `${header}.${payload}`
-
-  const pemBody = rawKey
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s+/g, "")
-
-  const keyBytes = Buffer.from(pemBody, "base64")
-
-  const cryptoKey = await globalThis.crypto.subtle.importKey(
-    "pkcs8",
-    keyBytes,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-
-  const sigBuffer = await globalThis.crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    Buffer.from(unsigned)
-  )
-
-  const assertion = `${unsigned}.${b64url(Buffer.from(sigBuffer))}`
-
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${encodeURIComponent(assertion)}`,
-  })
-
-  const json = await tokenRes.json() as { access_token?: string; expires_in?: number; error?: string }
-  if (!tokenRes.ok) console.error("[firebase-admin] token error:", json.error)
-
-  if (!json.access_token) throw new Error(`Token error: ${JSON.stringify(json)}`)
-  _cachedToken = json.access_token
-  _tokenExpiry = Date.now() + ((json.expires_in ?? 3600) - 60) * 1000
+  const app = initAdmin()
+  const result = await (app.options as any).credential.getAccessToken() as { access_token: string; expires_in: number }
+  _cachedToken = result.access_token
+  _tokenExpiry = Date.now() + (result.expires_in - 60) * 1000
   return _cachedToken
 }
 
