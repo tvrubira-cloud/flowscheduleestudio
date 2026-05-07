@@ -61,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const trialExpiraEm = toDate(ass.trialExpiraEm)
       const expiraEm = toDate(ass.expiraEm)
       const ultimoBonus = toDate(ass.ultimoBonusIndicacao)
-      const isAdm = ass.isAdmin === true
+      const isAdm = ass.isAdmin === true || (!!adminEmail && u.email === adminEmail)
       const isPro = isAdm || (ass.plano === "pro" && ass.status === "ativo" && (!expiraEm || expiraEm > agora))
       const isTrialing = !isPro && !!trialExpiraEm && trialExpiraEm > agora
       const trialDaysLeft = isTrialing && trialExpiraEm
